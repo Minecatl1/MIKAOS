@@ -1,0 +1,7 @@
+bluez
+network-manager
+blueman
+network-manager-gnome
+wine
+wget
+genisoimage
