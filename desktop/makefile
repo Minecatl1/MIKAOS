@@ -57,6 +57,18 @@ fetch-files:
 	$(MKDIR) $(ROOT_FS)/boot
 	mv $(FILES_DIR)/linux_binary_cache-1.0/vmlinuz-5.15.0-105 $(ROOT_FS)/boot/vmlinuz-linux
 	wget -o $(Bui)/stage2_eltorito https://github.com/littleosbook/littleosbook/raw/refs/heads/master/files/stage2_eltorito
+	@echo "Downloading Chrome Flex image..."
+	wget -o $(CHROMEOS_FLEX_DIR)/chromeos-flex.bin.zip $(CHROME_FLEX_URL)
+
+# Prepare ChromeOS Flex files
+chromeos_flex:
+    @echo "Preparing ChromeOS Flex..."
+    $(MKDIR) $(CHROMEOS_FLEX_DIR)/extracted
+    @echo "Unzipping ChromeOS Flex image..."
+    $(UNZIP) -o $(CHROMEOS_FLEX_DIR)/chromeos-flex.bin.zip -d $(CHROMEOS_FLEX_DIR)
+    @echo "Extracting contents of ChromeOS Flex..."
+    7z x $(CHROMEOS_FLEX_DIR)/latest.bin -o$(CHROMEOS_FLEX_DIR)/extracted
+    @echo "ChromeOS Flex files prepared in $(CHROMEOS_FLEX_DIR)/extracted."
 	
 # Prepare filesystem and directories
 prepare_dirs:
