@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ISO Builder</title>
+</head>
+<body>
+    <h1>ISO Customization</h1>
+    <form method="POST">
+        <h3>Select OS (Max 2):</h3>
+        {% for os in os_options %}
+        <input type="checkbox" name="os" value="{{ os }}"> {{ os }}<br>
+        {% endfor %}
+
+        <h3>Select Apps:</h3>
+        {% for app in app_options %}
+        <input type="checkbox" name="apps" value="{{ app }}"> {{ app }}<br>
+        {% endfor %}
+
+        <br>
+        <input type="submit" value="Generate ISO">
+    </form>
+</body>
+</html>
