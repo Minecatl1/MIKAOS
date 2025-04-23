@@ -5,3 +5,4 @@ network-manager-gnome
 wine
 wget
 genisoimage
+flask
