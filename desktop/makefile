@@ -1,4 +1,4 @@
-# Makefile for building Ubuntu MikaOS ISO
+# Makefile for building Ubuntu MikaOS ISO with dynamic app fetching
 
 # Output and file paths
 ISO_NAME := output/mikaos.iso
@@ -6,12 +6,9 @@ ROOT_FS := build/filesystem
 FILES_DIR := files
 OUTPUT_DIR := output
 GRUB_CFG := build/grub_config/grub.cfg
+CHROMEOS_FLEX_DIR := chromeos-flex
 Bui := build/filesystem/boot/grub/
-
-# URLs for dependencies
-STEAM_URL := https://repo.steampowered.com/steam/archive/stable/steam_latest.deb
-CHROME_URL := https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-HEROIC_URL := https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/releases/download/v2.16.1/Heroic-2.16.1-linux-x86_64.AppImage
+CONFIG_FILE := iso_config.txt
 
 # Tools
 MKISOFS := genisoimage
@@ -20,9 +17,15 @@ CP := cp
 RM := rm -rf
 
 # Default target
-all: buildfl get-deps fetch-files prepare_dirs build_iso
+all: run_setup buildfl get-deps fetch-files prepare_dirs build_iso
 
-# Command to create all necessary folders
+# Step 1: Run the Python setup script
+run_setup:
+	@echo "Running the setup script to generate iso_config.txt..."
+	python3 app.py
+	@echo "Setup script completed. Proceeding with ISO build..."
+
+# Step 2: Create necessary folders
 buildfl:
 	@echo "Creating required folders..."
 	$(MKDIR) $(FILES_DIR)
@@ -31,64 +34,45 @@ buildfl:
 	$(MKDIR) $(OUTPUT_DIR)
 	@echo "All folders created successfully!"
 
-# Install dependencies from requirements.txt
+# Step 3: Install dependencies from requirements.txt
 get-deps:
 	@echo "Installing dependencies from requirements.txt..."
 	@xargs -a requirements.txt sudo apt install -y
 	@echo "Configuring Bluetooth and Wi-Fi..."
-	sudo systemctl enable bluetooth
-	sudo systemctl enable NetworkManager
+	sudo services bluetooth start
 
-# Fetch required files (Steam, Chrome, Heroic, Kernel, Initramfs)
+# Step 4: Fetch required files dynamically based on iso_config.txt
 fetch-files:
-	@echo "Fetching required files..."
-	$(MKDIR) $(FILES_DIR)
-	@echo "Downloading Steam setup..."
-	wget -O $(FILES_DIR)/steamsetup.deb $(STEAM_URL)
-	@echo "Downloading Google Chrome .deb..."
-	wget -O $(FILES_DIR)/google-chrome.deb $(CHROME_URL)
-	@echo "Downloading Heroic Games Launcher AppImage..."
-	wget -O $(FILES_DIR)/heroicsetup.appimage $(HEROIC_URL)
-	@echo "Downloading kernel archive..."
-	wget -O $(FILES_DIR)/kernel_cache.zip https://github.com/Minecatl1/linux_binary_cache/archive/refs/tags/1.0.zip
-	@echo "Unzipping kernel archive..."
-	unzip -o $(FILES_DIR)/kernel_cache.zip -d $(FILES_DIR)
-	@echo "Moving vmlinuz-5.15.0-105 to the correct location..."
-	$(MKDIR) $(ROOT_FS)/boot
-	mv $(FILES_DIR)/linux_binary_cache-1.0/vmlinuz-5.15.0-105 $(ROOT_FS)/boot/vmlinuz-linux
-	wget -o $(Bui)/stage2_eltorito https://github.com/littleosbook/littleosbook/raw/refs/heads/master/files/stage2_eltorito
-	@echo "Downloading Chrome Flex image..."
-	wget -o $(CHROMEOS_FLEX_DIR)/chromeos-flex.bin.zip $(CHROME_FLEX_URL)
+	@echo "Fetching required files based on iso_config.txt..."
+	@cat $(CONFIG_FILE) | grep "Apps:" | cut -d':' -f2 | tr ',' '\n' | while read app; do \
+		echo "Installing $$app..."; \
+	sudo apt install -y $$app || echo "Failed to install $$app. Continuing."; \
+    	done
+    	@echo "Downloading kernel archive..."
+    	wget -O $(FILES_DIR)/kernel_cache.zip https://github.com/Minecatl1/linux_binary_cache/archive/refs/tags/1.0.zip
+    	@echo "Unzipping kernel archive..."
+    	unzip -o $(FILES_DIR)/kernel_cache.zip -d $(FILES_DIR)
+    	@echo "Moving vmlinuz-5.15.0-105 to the correct location..."
+    	$(MKDIR) $(ROOT_FS)/boot
+   	mv $(FILES_DIR)/linux_binary_cache-1.0/vmlinuz-5.15.0-105 $(ROOT_FS)/boot/vmlinuz-linux
+    	@echo "Downloading stage2_eltorito..."
+    	wget -O $(Bui)/stage2_eltorito https://github.com/littleosbook/littleosbook/raw/refs/heads/master/files/stage2_eltorito
 
-# Prepare ChromeOS Flex files
-chromeos_flex:
-    @echo "Preparing ChromeOS Flex..."
-    $(MKDIR) $(CHROMEOS_FLEX_DIR)/extracted
-    @echo "Unzipping ChromeOS Flex image..."
-    $(UNZIP) -o $(CHROMEOS_FLEX_DIR)/chromeos-flex.bin.zip -d $(CHROMEOS_FLEX_DIR)
-    @echo "Extracting contents of ChromeOS Flex..."
-    7z x $(CHROMEOS_FLEX_DIR)/latest.bin -o$(CHROMEOS_FLEX_DIR)/extracted
-    @echo "ChromeOS Flex files prepared in $(CHROMEOS_FLEX_DIR)/extracted."
-	
-# Prepare filesystem and directories
+# Step 5: Prepare filesystem and directories
 prepare_dirs:
 	@echo "Preparing filesystem..."
 	$(CP) $(GRUB_CFG) $(ROOT_FS)/boot/grub/
-	@echo "Installing applications into filesystem..."
-	sudo dpkg -i $(FILES_DIR)/google-chrome.deb || sudo apt install -f -y
-	sudo dpkg -i $(FILES_DIR)/steamsetup.deb || sudo apt install -f -y
-	chmod +x $(FILES_DIR)/heroicsetup.appimage
-	$(CP) $(FILES_DIR)/heroicsetup.appimage $(ROOT_FS)/usr/local/bin/heroic
+	@echo "Filesystem preparation completed."
 
-# Build the ISO
+# Step 6: Build the ISO
 build_iso:
 	@echo "Building Ubuntu MikaOS ISO..."
 	$(MKISOFS) -o $(ISO_NAME) \
 		-b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 -boot-info-table \
-		$(ROOT_FS)
+	$(ROOT_FS)
 	@echo "Ubuntu MikaOS ISO created successfully: $(ISO_NAME)"
 
-# Clean output directory and fetched files
+# Step 7: Clean output directory and fetched files
 clean:
 	@echo "Cleaning output directory and fetched files..."
 	$(RM) $(OUTPUT_DIR)
@@ -96,14 +80,15 @@ clean:
 
 # Help
 help:
-	@echo "Makefile targets:"	
-	@echo "  all         - Create folders, install dependencies, fetch files, prepare filesystem, and build ISO"
+	@echo "Makefile targets:"
+	@echo "  all         - Run setup script, create folders, install dependencies, fetch files, prepare filesystem, and build ISO"
+	@echo "  run_setup   - Run the Python setup script"
 	@echo "  buildfl     - Create all necessary folders"
 	@echo "  get-deps    - Install dependencies from requirements.txt"
-	@echo "  fetch-files - Download kernel, initramfs, Steam, Chrome, and Heroic installers"
+	@echo "  fetch-files - Fetch apps, kernel, and initramfs as defined in iso_config.txt"
 	@echo "  prepare_dirs- Prepare filesystem and directories"
 	@echo "  build_iso   - Build Ubuntu MikaOS ISO"
 	@echo "  clean       - Clean output files and fetched files"
 	@echo "  help        - Display this help message"
 
-.PHONY: all buildfl get-deps fetch-files prepare_dirs build_iso clean help
+.PHONY: all run_setup buildfl get-deps fetch-files prepare_dirs build_iso clean help
