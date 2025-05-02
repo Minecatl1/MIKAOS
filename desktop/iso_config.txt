@@ -1,0 +1,2 @@
+OS Choices: MikaOS, ChromeOS Flex
+Apps: Spotify, Discord, Steam

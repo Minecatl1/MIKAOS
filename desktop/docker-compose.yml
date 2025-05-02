@@ -1,0 +1,15 @@
+version: "3.8"
+
+services:
+  iso-builder:
+    build: .
+    container_name: iso-builder
+    ports:
+      - "5000:5000"
+    restart: unless-stopped
+    volumes:
+      - ./files:/app/files
+      - ./output:/app/output
+    environment:
+      - LANG=en_US.UTF-8
+      - LC_ALL=en_US.UTF-8

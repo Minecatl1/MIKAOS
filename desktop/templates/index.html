@@ -2,10 +2,54 @@
 <html>
 <head>
     <title>ISO Builder</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: black;
+            color: white;
+            text-align: center;
+        }
+        form {
+            margin-bottom: 20px;
+        }
+        #terminal-container {
+            width: 80%;
+            height: 300px;
+            background-color: #121212;
+            border: 2px solid #444;
+            overflow-y: auto;
+            padding: 10px;
+            text-align: left;
+            color: green;
+            font-family: monospace;
+            margin: auto;
+        }
+        #user-input {
+            width: 80%;
+            height: 100px;
+            background-color: black;
+            border: 2px solid #444;
+            color: white;
+            font-family: monospace;
+            padding: 5px;
+        }
+    </style>
+    <script>
+        function startBuild() {
+            document.getElementById("terminal-container").innerHTML = "Building ISO... Please wait.";
+            let eventSource = new EventSource("/terminal-stream");
+            eventSource.onmessage = function(event) {
+                document.getElementById("terminal-container").innerHTML += event.data + "<br>";
+            };
+            eventSource.onerror = function() {
+                eventSource.close();
+            };
+        }
+    </script>
 </head>
 <body>
     <h1>ISO Customization</h1>
-    <form method="POST">
+    <form id="build-form" onsubmit="startBuild(); return false;">
         <h3>Select OS (Max 2):</h3>
         {% for os in os_options %}
         <input type="checkbox" name="os" value="{{ os }}"> {{ os }}<br>
@@ -19,5 +63,11 @@
         <br>
         <input type="submit" value="Generate ISO">
     </form>
+
+    <h2>Terminal Output:</h2>
+    <div id="terminal-container"></div>
+
+    <h2>Interactive Terminal (Now Allows Commands)</h2>
+    <textarea id="user-input"></textarea>
 </body>
 </html>

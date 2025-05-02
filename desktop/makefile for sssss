@@ -17,8 +17,13 @@ CP := cp
 RM := rm -rf
 
 # Default target
-all: buildfl get-deps fetch-files prepare_dirs build_iso
+all: run_setup buildfl get-deps fetch-files prepare_dirs build_iso
 
+# Step 1: Run the Python setup script
+run_setup:
+	@echo "Running the setup script to generate iso_config.txt..."
+	python3 app.py
+	@echo "Setup script completed. Proceeding with ISO build..."
 
 # Step 2: Create necessary folders
 buildfl:
@@ -31,12 +36,10 @@ buildfl:
 
 # Step 3: Install dependencies from requirements.txt
 get-deps:
-	apt update
 	@echo "Installing dependencies from requirements.txt..."
-	@xargs -a requirements.txt apt install -y
-	pip install --upgrade pip
-	pip install flask
+	@xargs -a requirements.txt sudo apt install -y
 	@echo "Configuring Bluetooth and Wi-Fi..."
+	sudo services bluetooth start
 
 # Step 4: Fetch required files dynamically based on iso_config.txt
 fetch-files:
@@ -79,6 +82,7 @@ clean:
 help:
 	@echo "Makefile targets:"
 	@echo "  all         - Run setup script, create folders, install dependencies, fetch files, prepare filesystem, and build ISO"
+	@echo "  run_setup   - Run the Python setup script"
 	@echo "  buildfl     - Create all necessary folders"
 	@echo "  get-deps    - Install dependencies from requirements.txt"
 	@echo "  fetch-files - Fetch apps, kernel, and initramfs as defined in iso_config.txt"
@@ -87,4 +91,4 @@ help:
 	@echo "  clean       - Clean output files and fetched files"
 	@echo "  help        - Display this help message"
 
-.PHONY: all buildfl get-deps fetch-files prepare_dirs build_iso clean help
+.PHONY: all run_setup buildfl get-deps fetch-files prepare_dirs build_iso clean help
