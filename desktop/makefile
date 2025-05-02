@@ -31,9 +31,9 @@ buildfl:
 
 # Step 3: Install dependencies from requirements.txt
 get-deps:
-	apt update
+	sudo apt update
 	@echo "Installing dependencies from requirements.txt..."
-	@xargs -a requirements.txt apt install -y
+	@xargs -a requirements.txt sudo apt install -y
 	pip install --upgrade pip
 	pip install flask
 	@echo "Configuring Bluetooth and Wi-Fi..."
