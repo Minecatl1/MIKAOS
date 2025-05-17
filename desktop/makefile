@@ -15,10 +15,10 @@ MKISOFS := genisoimage
 MKDIR := mkdir -p
 CP := cp
 RM := rm -rf
+CHROOT := sudo chroot $(ROOT_FS)
 
 # Default target
-all: buildfl get-deps fetch-files prepare_dirs build_iso
-
+all: buildfl get-deps fetch-files prepare_dirs customize-rootfs build_iso
 
 # Step 2: Create necessary folders
 buildfl:
@@ -43,17 +43,17 @@ fetch-files:
 	@echo "Fetching required files based on iso_config.txt..."
 	@cat $(CONFIG_FILE) | grep "Apps:" | cut -d':' -f2 | tr ',' '\n' | while read app; do \
 		echo "Installing $$app..."; \
-	sudo apt install -y $$app || echo "Failed to install $$app. Continuing."; \
-    	done
-		@echo "Downloading kernel archive..."
-		wget -O $(FILES_DIR)/kernel_cache.zip https://github.com/Minecatl1/linux_binary_cache/archive/refs/tags/1.0.zip
-		@echo "Unzipping kernel archive..."
-		unzip -o $(FILES_DIR)/kernel_cache.zip -d $(FILES_DIR)
-		@echo "Moving vmlinuz-5.15.0-105 to the correct location..."
-		$(MKDIR) $(ROOT_FS)/boot
+		sudo apt install -y $$app || echo "Failed to install $$app. Continuing."; \
+	done
+	@echo "Downloading kernel archive..."
+	wget -O $(FILES_DIR)/kernel_cache.zip https://github.com/Minecatl1/linux_binary_cache/archive/refs/tags/1.0.zip
+	@echo "Unzipping kernel archive..."
+	unzip -o $(FILES_DIR)/kernel_cache.zip -d $(FILES_DIR)
+	@echo "Moving vmlinuz-5.15.0-105 to the correct location..."
+	$(MKDIR) $(ROOT_FS)/boot
 	mv $(FILES_DIR)/linux_binary_cache-1.0/vmlinuz-5.15.0-105 $(ROOT_FS)/boot/vmlinuz-linux
-		@echo "Downloading stage2_eltorito..."
-		wget -O $(Bui)/stage2_eltorito https://github.com/littleosbook/littleosbook/raw/refs/heads/master/files/stage2_eltorito
+	@echo "Downloading stage2_eltorito..."
+	wget -O $(Bui)/stage2_eltorito https://github.com/littleosbook/littleosbook/raw/refs/heads/master/files/stage2_eltorito
 
 # Step 5: Prepare filesystem and directories
 prepare_dirs:
@@ -61,15 +61,27 @@ prepare_dirs:
 	$(CP) $(GRUB_CFG) $(ROOT_FS)/boot/grub/
 	@echo "Filesystem preparation completed."
 
-# Step 6: Build the ISO
+# Step 6: Customize rootfs (NEW)
+customize-rootfs:
+	@echo "Customizing rootfs for Ubuntu-style theming and Flatpak..."
+	$(CHROOT) /bin/bash -c " \
+		apt-get update && \
+		apt-get install -y flatpak gnome-tweaks yaru-theme-gtk && \
+		flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo && \
+		flatpak install -y --noninteractive com.heroicgameslauncher.hgl com.valvesoftware.Steam && \
+		gsettings set org.gnome.shell.extensions.dash-to-dock dock-position BOTTOM \
+	"
+	@echo "Rootfs customization complete."
+
+# Step 7: Build the ISO
 build_iso:
 	@echo "Building Ubuntu MikaOS ISO..."
 	$(MKISOFS) -o $(ISO_NAME) \
 		-b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 -boot-info-table \
-	$(ROOT_FS)
+		$(ROOT_FS)
 	@echo "Ubuntu MikaOS ISO created successfully: $(ISO_NAME)"
 
-# Step 7: Clean output directory and fetched files
+# Step 8: Clean output directory and fetched files
 clean:
 	@echo "Cleaning output directory and fetched files..."
 	$(RM) $(OUTPUT_DIR)
@@ -78,13 +90,14 @@ clean:
 # Help
 help:
 	@echo "Makefile targets:"
-	@echo "  all         - Run setup script, create folders, install dependencies, fetch files, prepare filesystem, and build ISO"
-	@echo "  buildfl     - Create all necessary folders"
-	@echo "  get-deps    - Install dependencies from requirements.txt"
-	@echo "  fetch-files - Fetch apps, kernel, and initramfs as defined in iso_config.txt"
-	@echo "  prepare_dirs- Prepare filesystem and directories"
-	@echo "  build_iso   - Build Ubuntu MikaOS ISO"
-	@echo "  clean       - Clean output files and fetched files"
-	@echo "  help        - Display this help message"
+	@echo "  all              - Full build process (folders, deps, files, ISO)"
+	@echo "  buildfl          - Create folders"
+	@echo "  get-deps         - Install system dependencies"
+	@echo "  fetch-files      - Fetch apps/kernel from config"
+	@echo "  prepare_dirs     - Copy GRUB config"
+	@echo "  customize-rootfs - Add Flatpak, themes, and Ubuntu-style dock (NEW)"
+	@echo "  build_iso        - Generate final ISO"
+	@echo "  clean            - Remove build artifacts"
+	@echo "  help             - Show this message"
 
-.PHONY: all buildfl get-deps fetch-files prepare_dirs build_iso clean help
+.PHONY: all buildfl get-deps fetch-files prepare_dirs customize-rootfs build_iso clean help
