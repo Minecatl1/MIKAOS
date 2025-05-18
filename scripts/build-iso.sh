@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+# Generate module dependencies for custom kernel
+depmod -b build $(basename build/boot/vmlinuz | sed 's/vmlinuz-//')
+
 xorriso -as mkisofs \
     -volid "MIKAOS" \
     -rational-rock \
@@ -9,8 +12,5 @@ xorriso -as mkisofs \
     -no-emul-boot \
     -boot-load-size 4 \
     -boot-info-table \
-    -eltorito-alt-boot \
-    -e EFI/efiboot.img \
-    -no-emul-boot \
     -o output/mikaos.iso \
     build
