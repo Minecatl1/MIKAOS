@@ -1,30 +1,26 @@
 name: Build MikaOS
 
-on:
-  push:
-    branches: [ main ]
-  workflow_dispatch:
+on: [push, workflow_dispatch]
 
 jobs:
   build:
-    runs-on: ubuntu-latest  # Changed to current runner
-    timeout-minutes: 120
-
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-
-    - name: Setup Build Environment
+      
+    - name: Setup environment
       run: |
         sudo apt-get update
-        sudo apt-get install -y make xorriso genisoimage squashfs-tools p7zip-full
-
-    - name: Run Build Process
-      run: |
-        make all
-
+        sudo apt-get install -y make xorriso p7zip-full
+        
+    - name: Build ISO
+      run: make
+      
     - name: Upload Artifact
-      uses: actions/upload-artifact@v4  # Updated to v4
+      uses: actions/upload-artifact@v4
       with:
         name: mikaos-iso
         path: output/mikaos.iso
