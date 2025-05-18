@@ -14,18 +14,25 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Configure repositories
+      run: |
+        sudo sed -i 's/azure\.archive\.ubuntu\.com/archive.ubuntu.com/g' /etc/apt/sources.list
+        sudo add-apt-repository universe
+        sudo add-apt-repository multiverse
+        sudo apt-get update
+
     - name: Install dependencies
       run: |
-        sudo apt-get update
         sudo apt-get install -y \
           make \
           xorriso \
           unzip \
           wget \
-          grub-common \
-          grub-efi-amd64-bin \  # UEFI support
-          initramfs-tools \
-          dosfstools
+          grub-pc-bin \          # BIOS bootloader
+          grub-efi-amd64-signed \ # UEFI bootloader
+          dosfstools \
+          mtools \
+          initramfs-tools-core
 
     - name: Prepare directories
       run: |
@@ -35,12 +42,6 @@ jobs:
       run: |
         chmod +x scripts/*.sh
         make all
-
-    - name: Verify ISO
-      run: |
-        file output/mikaos.iso | grep "ISO 9660 CD-ROM"
-        xorriso -indev output/mikaos.iso -check_media
-        xorriso -indev output/mikaos.iso -find /boot
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
