@@ -4,22 +4,31 @@ on: [push, workflow_dispatch]
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-      
-    - name: Setup environment
+
+    - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y make xorriso p7zip-full
-        
-    - name: Build ISO
-      run: make
-      
-    - name: Upload Artifact
+        sudo apt-get install -y \
+          make \
+          xorriso \
+          p7zip-full \
+          fuseiso
+
+    - name: Set permissions
+      run: |
+        chmod +x scripts/*.sh
+
+    - name: Run build
+      run: |
+        make all
+
+    - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
         name: mikaos-iso
