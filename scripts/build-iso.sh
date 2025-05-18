@@ -1,12 +1,12 @@
 #!/bin/bash
 set -e
 
+echo "Building hybrid ISO..."
 xorriso -as mkisofs \
   -volid "MikaOS" \
-  -b boot/grub/stage2_eltorito \
+  -eltorito-boot boot/grub/stage2_eltorito \
   -no-emul-boot -boot-load-size 4 -boot-info-table \
-  -eltorito-alt-boot -e EFI/efiboot.img -no-emul-boot \
   -o output/mikaos.iso \
-  build/filesystem
+  build
 
-isohybrid --uefi output/mikaos.iso
+echo "ISO created at output/mikaos.iso"
