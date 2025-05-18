@@ -1,14 +1,17 @@
-name: Build MikaOS
+name: Build MIKAOS
 
-on: [push, workflow_dispatch]
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
-    timeout-minutes: 20
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
-    - name: Checkout code
+    - name: Checkout repository
       uses: actions/checkout@v4
 
     - name: Install dependencies
@@ -17,19 +20,34 @@ jobs:
         sudo apt-get install -y \
           make \
           xorriso \
-          p7zip-full \
-          fuseiso
+          unzip \
+          wget \
+          grub-common \
+          initramfs-tools \
+          file \
+          isomd5sum
 
-    - name: Set permissions
+    - name: Prepare directories
       run: |
+        mkdir -p build/boot/grub
+        mkdir -p output
+
+    - name: Fetch and build
+      run: |
+        # Set permissions for scripts
         chmod +x scripts/*.sh
-
-    - name: Run build
-      run: |
+        
+        # Run build process
         make all
+
+    - name: Verify ISO
+      run: |
+        file output/mikaos.iso | grep "ISO 9660 CD-ROM"
+        isoinfo -i output/mikaos.iso -R -l | grep "vmlinuz"
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
         name: mikaos-iso
         path: output/mikaos.iso
+        retention-days: 3
