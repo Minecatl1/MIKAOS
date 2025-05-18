@@ -1,0 +1,54 @@
+name: Build MIKAOS Hybrid
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Configure repositories
+      run: |
+        sudo rm -f /etc/apt/sources.list.d/azure.list
+        sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
+        sudo sed -i 's/azure\.archive\.ubuntu\.com/archive.ubuntu.com/g' /etc/apt/sources.list
+        sudo add-apt-repository -y universe
+        sudo add-apt-repository -y multiverse
+        sudo apt-get update -y
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get install -y \
+          make \
+          xorriso \
+          unzip \
+          wget \
+          grub2-common \
+          grub-efi-amd64-bin \
+          grub-pc-bin \
+          dosfstools \
+          mtools \
+          initramfs-tools \
+          linux-image-generic
+
+    - name: Prepare directories
+      run: |
+        mkdir -p build/{boot/grub,EFI}
+
+    - name: Build process
+      run: |
+        chmod +x scripts/*.sh
+        make all
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4  # Corrected name
+      with:
+        name: mikaos-hybrid.iso
+        path: output/mikaos.iso
