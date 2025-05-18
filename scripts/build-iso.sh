@@ -9,8 +9,8 @@ xorriso -as mkisofs \
     -no-emul-boot \
     -boot-load-size 4 \
     -boot-info-table \
-    -input-charset utf-8 \
+    -eltorito-alt-boot \
+    -e EFI/efiboot.img \
+    -no-emul-boot \
     -o output/mikaos.iso \
     build
-
-isohybrid --uefi output/mikaos.iso
