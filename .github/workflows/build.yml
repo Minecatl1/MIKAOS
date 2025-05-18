@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest  # Changed to current runner
     timeout-minutes: 120
 
     steps:
@@ -17,14 +17,14 @@ jobs:
     - name: Setup Build Environment
       run: |
         sudo apt-get update
-        sudo apt-get install -y make
+        sudo apt-get install -y make xorriso genisoimage squashfs-tools p7zip-full
 
     - name: Run Build Process
-      run: make all
+      run: |
+        make all
 
     - name: Upload Artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4  # Updated to v4
       with:
         name: mikaos-iso
         path: output/mikaos.iso
-        retention-days: 3
