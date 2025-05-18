@@ -1,0 +1,30 @@
+name: Build MikaOS
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 120
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Build Environment
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y make
+
+    - name: Run Build Process
+      run: make all
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: mikaos-iso
+        path: output/mikaos.iso
+        retention-days: 3
