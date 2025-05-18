@@ -1,23 +1,35 @@
 #!/bin/bash
-set -e
+set -eo pipefail
 
-# Use Ubuntu Minimal CD (69MB) as base
-BASE_URL="http://archive.ubuntu.com/ubuntu/dists/jammy/main/installer-amd64/current/legacy-images/netboot/mini.iso"
+# Use reliable Ubuntu minimal ISO mirror
+BASE_URL="https://mirrors.edge.kernel.org/ubuntu/dists/focal/main/installer-amd64/current/legacy-images/netboot/mini.iso"
 
-echo "Downloading minimal base image..."
-wget -O base.iso "$BASE_URL"
+echo "Downloading base image..."
+if ! wget -O base.iso "$BASE_URL"; then
+  echo "Failed to download base ISO"
+  exit 1
+fi
 
 echo "Extracting kernel..."
 mkdir -p build/boot/grub
-7z x -obuild base.iso linux initrd.gz
-mv build/linux build/boot/vmlinuz
-mv build/initrd.gz build/boot/initrd.img
+if ! 7z x -obuild base.iso linux initrd.gz; then
+  echo "ISO extraction failed - trying alternative method"
+  sudo apt-get install -y fuseiso
+  mkdir -p iso_mount
+  fuseiso base.iso iso_mount
+  cp iso_mount/linux iso_mount/initrd.gz build/
+  fusermount -u iso_mount
+fi
 
-echo "Preparing GRUB config..."
+echo "Organizing boot files..."
+mv -v build/linux build/boot/vmlinuz || true
+mv -v build/initrd.gz build/boot/initrd.img || true
+
+echo "Creating GRUB config..."
 cat > build/boot/grub/grub.cfg <<EOL
-set timeout=10
+set timeout=5
 menuentry "MikaOS" {
-    linux /boot/vmlinuz root=/dev/sda1 ro quiet splash
+    linux /boot/vmlinuz quiet splash
     initrd /boot/initrd.img
 }
 EOL
