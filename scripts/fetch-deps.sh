@@ -1,6 +1,24 @@
 #!/bin/bash
 set -eo pipefail
 
+# List of required tools
+REQUIRED_CMDS=(xorriso wget unzip grub-mkstandalone mkinitramfs)
+
+# Check if running as root for package installation
+if [[ $EUID -ne 0 ]]; then
+  echo "This script must be run as root to install missing dependencies."
+  exit 1
+fi
+
+# Install missing tools
+for cmd in "${REQUIRED_CMDS[@]}"; do
+  if ! command -v "$cmd" > /dev/null 2>&1; then
+    echo "Installing missing dependency: $cmd"
+    apt-get update
+    apt-get install -y "$cmd"
+  fi
+done
+
 # Create initramfs structure
 mkdir -p build/etc/initramfs-tools/{conf.d,hooks,scripts}
 cat > build/etc/initramfs-tools/initramfs.conf <<EOL
