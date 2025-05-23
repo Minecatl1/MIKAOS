@@ -31,7 +31,7 @@ jobs:
           wget \
           grub2-common \
           grub-efi-amd64-bin \
-          linux-firmware \ 
+          linux-firmware \
           firmware-realtek
 
     - name: Build ISO
