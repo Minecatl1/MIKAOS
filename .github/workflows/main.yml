@@ -32,7 +32,7 @@ jobs:
           grub2-common \
           grub-efi-amd64-bin \
           initramfs-tools \
-          linux-firmware \          # Replaces firmware-linux-free        
+          linux-firmware \ 
           firmware-realtek
 
     - name: Build ISO
