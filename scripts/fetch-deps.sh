@@ -65,7 +65,8 @@ grub-mkstandalone -O i386-pc \
   --modules="biosdisk iso9660" \
   --locales="" \
   --fonts="" \
-  --themes=""
+  --themes="" \
+  "boot/grub/grub.cfg=config/grub-bios.cfg"
 cat /usr/lib/grub/i386-pc/cdboot.img build/boot/grub/core.img > build/boot/grub/stage2_eltorito
 
 # Download Google Chrome .deb to config/packages if not already present
