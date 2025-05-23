@@ -69,5 +69,10 @@ grub-mkstandalone -O i386-pc \
   "boot/grub/grub.cfg=config/grub-bios.cfg"
 cat /usr/lib/grub/i386-pc/cdboot.img build/boot/grub/core.img > build/boot/grub/stage2_eltorito
 
+for pkg in config/packages/*.deb; do
+    [ -e "$pkg" ] || continue  # Skip if no .deb files exist
+    dpkg -i "$pkg"
+done
+
 # Generate initrd
 mkinitramfs -d build/etc/initramfs-tools -o build/boot/initrd.img
