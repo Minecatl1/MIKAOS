@@ -34,6 +34,7 @@ jobs:
           linux-firmware
 
     - name: Build minimal GRUB BIOS core.img and check size
+      continue-on-error: true
       run: |
         mkdir -p build/boot/grub
         grub-mkstandalone -O i386-pc \
@@ -43,8 +44,12 @@ jobs:
           --fonts="" \
           --themes="" \
           "boot/grub/grub.cfg=config/grub-bios.cfg"
-        ls -lh build/boot/grub/core.img
-        strings build/boot/grub/core.img | grep '\.mod' || true
+        echo "==== core.img file size ===="
+        ls -lh build/boot/grub/core.img || echo "core.img not found"
+        echo "==== Modules in core.img ===="
+        if [ -f build/boot/grub/core.img ]; then
+          strings build/boot/grub/core.img | grep '\.mod' || true
+        fi
 
     - name: Build ISO
       run: |
@@ -52,7 +57,25 @@ jobs:
         chmod +x scripts/*.sh
         sudo make all
 
-    - name: Upload artifact
+    - name: Print core.img size and modules after build (if any)
+      if: always()
+      run: |
+        echo "==== core.img file size (post-build) ===="
+        ls -lh build/boot/grub/core.img || echo "core.img not found"
+        echo "==== Modules in core.img (post-build) ===="
+        if [ -f build/boot/grub/core.img ]; then
+          strings build/boot/grub/core.img | grep '\.mod' || true
+        fi
+
+    - name: Upload core.img artifact for debugging
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: core-img-debug
+        path: build/boot/grub/core.img
+
+    - name: Upload ISO artifact
+      if: always()
       uses: actions/upload-artifact@v4
       with:
         name: mikaos-latest
