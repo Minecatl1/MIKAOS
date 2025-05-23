@@ -69,6 +69,12 @@ grub-mkstandalone -O i386-pc \
   "boot/grub/grub.cfg=config/grub-bios.cfg"
 cat /usr/lib/grub/i386-pc/cdboot.img build/boot/grub/core.img > build/boot/grub/stage2_eltorito
 
+# Download Google Chrome .deb to config/packages if not already present
+CHROME_DEB="config/packages/google-chrome-stable_current_amd64.deb"
+if [ ! -f "$CHROME_DEB" ]; then
+  wget -O "$CHROME_DEB" "https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb"
+fi
+
 for pkg in config/packages/*.deb; do
     [ -e "$pkg" ] || continue  # Skip if no .deb files exist
     dpkg -i "$pkg"
