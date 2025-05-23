@@ -32,8 +32,7 @@ jobs:
           grub2-common \
           grub-efi-amd64-bin \
           initramfs-tools \
-          linux-firmware \          # Replaces firmware-linux-free
-          firmware-iwlwifi \        # Now in universe repo
+          linux-firmware \          # Replaces firmware-linux-free        
           firmware-realtek
 
     - name: Build ISO
