@@ -2,7 +2,7 @@
 set -eo pipefail
 
 # List of required tools
-REQUIRED_CMDS=(xorriso wget unzip grub-mkstandalone mkinitramfs)
+REQUIRED_CMDS=(genisoimage wget unzip grub-mkstandalone mkinitramfs)
 
 # Check if running as root for package installation
 if [[ $EUID -ne 0 ]]; then
@@ -50,24 +50,6 @@ wget -q --show-progress -O linux_binary_cache.zip \
   https://github.com/Minecatl1/linux_binary_cache/archive/refs/tags/1.0.zip
 unzip -j linux_binary_cache.zip "linux_binary_cache-1.0/vmlinuz-5.15.0-105" -d build/boot/
 mv build/boot/vmlinuz-5.15.0-105 build/boot/vmlinuz
-
-# Build UEFI GRUB
-grub-mkstandalone -O x86_64-efi \
-  -o build/EFI/efiboot.img \
-  --modules="part_gpt part_msdos fat ext2" \
-  --locales="" \
-  --themes="" \
-  "boot/grub/grub.cfg=config/grub-uefi.cfg"
-
-# Build BIOS GRUB
-grub-mkstandalone -O i386-pc \
-  -o build/boot/grub/core.img \
-  --modules="biosdisk iso9660" \
-  --locales="" \
-  --fonts="" \
-  --themes="" \
-  "boot/grub/grub.cfg=config/grub-bios.cfg"
-cat /usr/lib/grub/i386-pc/cdboot.img build/boot/grub/core.img > build/boot/grub/stage2_eltorito
 
 # Download Google Chrome .deb to config/packages if not already present
 CHROME_DEB="config/packages/google-chrome-stable_current_amd64.deb"
