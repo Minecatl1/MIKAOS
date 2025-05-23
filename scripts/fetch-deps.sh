@@ -75,6 +75,13 @@ if [ ! -f "$CHROME_DEB" ]; then
   wget -O "$CHROME_DEB" "https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb"
 fi
 
+# Get Steam
+# Download Steam .deb to config/packages if not already present
+STEAM_DEB="config/packages/steam.deb"
+if [ ! -f "$STEAM_DEB" ]; then
+  wget -O "$STEAM_DEB" "https://cdn.cloudflare.steamstatic.com/client/installer/steam.deb"
+fi
+
 for pkg in config/packages/*.deb; do
     [ -e "$pkg" ] || continue  # Skip if no .deb files exist
     dpkg -i "$pkg"
