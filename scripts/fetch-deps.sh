@@ -62,10 +62,10 @@ grub-mkstandalone -O x86_64-efi \
 # Build BIOS GRUB
 grub-mkstandalone -O i386-pc \
   -o build/boot/grub/core.img \
-  --modules="biosdisk part_msdos iso9660" \
+  --modules="biosdisk iso9660" \
   --locales="" \
-  --themes="" \
   --fonts="" \
+  --themes="" \
   "boot/grub/grub.cfg=config/grub-bios.cfg"
 cat /usr/lib/grub/i386-pc/cdboot.img build/boot/grub/core.img > build/boot/grub/stage2_eltorito
 
