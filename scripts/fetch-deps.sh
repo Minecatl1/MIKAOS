@@ -42,6 +42,9 @@ ahci
 i915
 EOL
 
+sudo apt-get install linux-image-generic linux-headers-generic
+update-initramfs -u
+
 # Get custom kernel
 wget -q --show-progress -O linux_binary_cache.zip \
   https://github.com/Minecatl1/linux_binary_cache/archive/refs/tags/1.0.zip
