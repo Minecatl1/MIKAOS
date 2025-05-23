@@ -31,7 +31,6 @@ jobs:
           wget \
           grub2-common \
           grub-efi-amd64-bin \
-          initramfs-tools \
           linux-firmware \ 
           firmware-realtek
 
