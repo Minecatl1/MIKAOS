@@ -2,7 +2,7 @@
 set -eo pipefail
 
 # List of required tools
-REQUIRED_CMDS=(genisoimage wget unzip grub-mkstandalone mkinitramfs pkexec policykit-1 xterm gnome-terminal konsole zenity)
+REQUIRED_CMDS=(genisoimage wget unzip grub-mkstandalone mkinitramfs pkexec policykit-1 xterm gnome-terminal konsole zenity flatpak)
 
 # Check if running as root for package installation
 if [[ $EUID -ne 0 ]]; then
