@@ -1,6 +1,3 @@
-# MIKAOS
-fork to install android
-
-the command to install android is "
-cd android
-make install android "
+# MIKAOS 
+if you want to build it yourself run "sudo make all"
+if not the download link is the website
