@@ -66,6 +66,11 @@ if [ ! -f "$STEAM_DEB" ]; then
   wget -O "$STEAM_DEB" "https://cdn.cloudflare.steamstatic.com/client/installer/steam.deb"
 fi
 
+HEROIC_DEB="config/packages/heroic.deb"
+if [ ! -f "$HEROIC_DEB" ]; then
+  wget -O "$HEROIC_DEB" "https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/releases/download/v2.17.0/Heroic-2.17.0-linux-amd64.deb"
+fi
+
 for pkg in config/packages/*.deb; do
     [ -e "$pkg" ] || continue  # Skip if no .deb files exist
     dpkg -i "$pkg"
