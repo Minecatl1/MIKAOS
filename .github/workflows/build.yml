@@ -28,7 +28,7 @@ jobs:
             initramfs-tools
 
       - name: Build ISO
-        run: bash scripts/build-iso.sh
+        run: sudo make all
 
       - name: Check ISO exists and print size
         run: |
