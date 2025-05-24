@@ -1,110 +1,67 @@
-name: Build MIKAOS Hybrid
+name: Build and Test ISO
 
 on:
   push:
-    branches: [ main ]
+    branches: [ "main", "test" ]
+  pull_request:
+    branches: [ "main", "test" ]
   workflow_dispatch:
 
 jobs:
-  build:
+  build-and-test:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Configure repositories
-      run: |
-        sudo rm -f /etc/apt/sources.list.d/azure.list
-        sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
-        sudo sed -i 's/azure\.archive\.ubuntu\.com/archive.ubuntu.com/g' /etc/apt/sources.list
-        sudo add-apt-repository -y universe
-        sudo add-apt-repository -y multiverse
-        sudo apt-get update -y
+      - name: Set up dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            genisoimage \
+            qemu-system-x86 \
+            wget \
+            unzip \
+            grub-pc-bin \
+            grub-efi-amd64-bin \
+            initramfs-tools
 
-    - name: Install dependencies
-      run: |
-        sudo apt-get install -y \
-          make \
-          xorriso \
-          unzip \
-          wget \
-          grub2-common \
-          grub-efi-amd64-bin \
-          grub-pc-bin \
-          dosfstools \
-          mtools \
-          initramfs-tools \
-          linux-image-generic
+      - name: Fetch build dependencies
+        run: sudo bash scripts/fetch-deps.sh
 
-    - name: Prepare directories
-      run: |
-        mkdir -p build/{boot/grub,EFI}
+      - name: Build ISO
+        run: bash scripts/build-iso.sh
 
-    - name: Build process
-      run: |
-        chmod +x scripts/*.sh
-        make all
+      - name: Check ISO exists and print size
+        run: |
+          if [ ! -f output/mikaos.iso ]; then
+            echo "ISO not found!"
+            exit 1
+          fi
+          ls -lh output/mikaos.iso
 
-    - name: Upload artifact
-      uses: actions/upload-artifact@v4  # Corrected name
-      with:
-        name: mikaos-hybrid.iso
-        path: output/mikaos.isoname: Build MIKAOS Hybrid
+      - name: QEMU boot test (look for GRUB)
+        run: |
+          set -e
+          timeout 20 qemu-system-x86_64 \
+            -cdrom output/mikaos.iso \
+            -nographic \
+            -no-reboot \
+            -serial mon:stdio \
+            > qemu_output.txt 2>&1 || true
 
-on:
-  push:
-    branches: [ main ]
-  workflow_dispatch:
+          # Change this string to something your ISO always outputs on successful boot (e.g., "MIKAOS", "GRUB", etc.)
+          if grep -q "GRUB" qemu_output.txt; then
+            echo "ISO booted and GRUB loaded successfully."
+          else
+            echo "ISO did not boot successfully (GRUB not found in output)!"
+            cat qemu_output.txt
+            exit 1
+          fi
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    timeout-minutes: 35
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Configure repositories
-      run: |
-        # Remove Azure-specific sources
-        sudo rm -f /etc/apt/sources.list.d/azure.list
-        sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
-        
-        # Update to main Ubuntu repositories
-        sudo sed -i 's/azure\.archive\.ubuntu\.com/archive.ubuntu.com/g' /etc/apt/sources.list
-        sudo add-apt-repository -y universe
-        sudo add-apt-repository -y multiverse
-        sudo apt-get update -y
-
-    - name: Install dependencies
-      run: |
-        sudo apt-get install -y \
-          make \
-          xorriso \
-          unzip \
-          wget \
-          grub2-common \
-          grub-efi-amd64-bin \
-          grub-pc-bin \
-          dosfstools \
-          mtools \
-          initramfs-tools \
-          linux-image-generic
-
-    - name: Prepare directories
-      run: |
-        mkdir -p build/{boot/grub,EFI}
-
-    - name: Build process
-      run: |
-        chmod +x scripts/*.sh
-        make all
-
-    - name: Upload artifact
-      uses: actions/upload-artiment@v4
-      with:
-        name: mikaos-hybrid.iso
-        path: output/mikaos.iso
+      - name: Upload ISO artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mikaos-iso
+          path: output/mikaos.iso
