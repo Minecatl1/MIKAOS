@@ -27,9 +27,6 @@ jobs:
             grub-efi-amd64-bin \
             initramfs-tools
 
-      - name: Fetch build dependencies
-        run: sudo bash scripts/fetch-deps.sh
-
       - name: Build ISO
         run: bash scripts/build-iso.sh
 
