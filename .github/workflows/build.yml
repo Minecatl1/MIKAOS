@@ -1,10 +1,10 @@
-name: Build and Test ISO
+name: Build and Test MIKAOS iso with gnome installed
 
 on:
   push:
-    branches: [ "main", "test" ]
+    branches: [ "beta" ]
   pull_request:
-    branches: [ "main", "test" ]
+    branches: [ "beta" ]
   workflow_dispatch:
 
 jobs:
