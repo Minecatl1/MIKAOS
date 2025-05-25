@@ -2,7 +2,7 @@
 set -eo pipefail
 
 # List of required tools
-REQUIRED_CMDS=(genisoimage wget unzip grub-mkstandalone mkinitramfs pkexec policykit-1 xterm gnome-terminal konsole zenity flatpak libnotify4)
+REQUIRED_CMDS=(genisoimage wget unzip grub-mkstandalone mkinitramfs pkexec policykit-1 xterm gnome-terminal konsole zenity flatpak libnotify4 python3-lxml python3-pil python3-gi-cairo python3-setproctitle gir1.2-gtk-3.0 gir1.2-webkit2-4.0 gir1.2-webkit2-4.1 gir1.2-notify-0.7 cabextract fluid-soundfont-gs x11-xserver-utils mesa-utils vulkan-tools)
 
 # Check if running as root for package installation
 if [[ $EUID -ne 0 ]]; then
