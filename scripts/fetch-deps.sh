@@ -2,8 +2,7 @@
 set -eo pipefail
 
 # List of required tools
-REQUIRED_CMDS=(genisoimage wget unzip grub-mkstandalone mkinitramfs pkexec policykit-1 xterm gnome-terminal konsole zenity flatpak libnotify4 python3-lxml python3-pil python3-gi-cairo python3-setproctitle gir1.2-gtk-3.0 gir1.2-webkit2-4.0 gir1.2-webkit2-4.1 gir1.2-notify-0.7 cabextract fluid-soundfont-gs x11-xserver-utils mesa-utils vulkan-tools)
-
+REQUIRED_CMDS=(genisoimage wget unzip grub-mkstandalone mkinitramfs pkexec policykit-1 xterm gnome-terminal konsole zenity flatpak libnotify4)
 # Check if running as root for package installation
 if [[ $EUID -ne 0 ]]; then
   echo "This script must be run as root to install missing dependencies."
@@ -18,6 +17,24 @@ for cmd in "${REQUIRED_CMDS[@]}"; do
     apt-get install -y "$cmd"
   fi
 done
+
+apt update
+
+apt install -y \
+  python3-lxml \
+  python3-pil \
+  python3-gi-cairo \
+  python3-setproctitle \
+  gir1.2-gtk-3.0 \
+  gir1.2-webkit2-4.0 \
+  gir1.2-webkit2-webextension-4.0 \
+  gir1.2-webkit2-4.1 \
+  gir1.2-notify-0.7 \
+  cabextract \
+  fluid-soundfont-gs \
+  x11-xserver-utils \
+  mesa-utils \
+  vulkan-tools
 
 # Create initramfs structure
 mkdir -p build/etc/initramfs-tools/{conf.d,hooks,scripts}
@@ -61,14 +78,19 @@ fi
 
 # Get Steam
 # Download Steam .deb to config/packages if not already present
-STEAM_DEB="config/packages/steam.deb"
+STEAM_DEB="config/packages/Steam.deb"
 if [ ! -f "$STEAM_DEB" ]; then
   wget -O "$STEAM_DEB" "https://cdn.cloudflare.steamstatic.com/client/installer/steam.deb"
 fi
 
-HEROIC_DEB="config/packages/heroic.deb"
+HEROIC_DEB="config/packages/Heroic.deb"
 if [ ! -f "$HEROIC_DEB" ]; then
   wget -O "$HEROIC_DEB" "https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/releases/download/v2.17.0/Heroic-2.17.0-linux-amd64.deb"
+fi 
+
+LUTRIS_DEB="config/packages/lutris_0.5.18_all.deb"
+if [ ! -f "$LUTRIS_DEB" ]; then
+  wget -O "$LUTRIS_DEB" "https://github.com/lutris/lutris/releases/download/v0.5.18/lutris_0.5.18_all.deb"
 fi
 
 for pkg in config/packages/*.deb; do
