@@ -3,6 +3,7 @@
 all:
 	@echo "Building MIKAOS..."
 	@bash scripts/fetch-deps.sh
+	@bash scripts/install-gnome.sh
 	@bash scripts/build-iso.sh
 
 clean:
