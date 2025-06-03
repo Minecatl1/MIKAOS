@@ -26,8 +26,6 @@ apt install -y \
   python3-gi-cairo \
   python3-setproctitle \
   gir1.2-gtk-3.0 \
-  gir1.2-webkit2-4.0 \
-  gir1.2-webkit2-webextension-4.0 \
   gir1.2-webkit2-4.1 \
   gir1.2-notify-0.7 \
   cabextract \
