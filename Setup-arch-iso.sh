@@ -39,6 +39,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Free disk space on runner
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /usr/share/swift
+          df -h
+
       - name: Install build dependencies
         run: |
           pacman -Syu --noconfirm
