@@ -235,6 +235,10 @@ cat > "$BASE_DIR/archlive/airootfs/root/customize_airootfs.sh" << 'EOF'
 systemctl enable NetworkManager.service
 systemctl enable lightdm.service
 
+# --- Install yay AUR helper ---
+sudo -u arch bash -c 'cd /tmp && git clone https://aur.archlinux.org/yay.git && cd yay && makepkg -si --noconfirm'
+rm -rf /tmp/yay
+
 # --- Audio Setup ---
 systemctl --global enable pulseaudio
 
