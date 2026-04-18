@@ -126,7 +126,7 @@ iso_application="Gaming Arch Linux Live/Rescue CD"
 iso_version="$(date +%Y.%m.%d)"
 install_dir="arch"
 buildmodes=('iso')
-bootmodes=('bios.syslinux.mbr' 'bios.syslinux.eltorito' 'uefi-x64.systemd-boot.esp' 'uefi-x64.systemd-boot.eltorito')
+bootmodes=('bios.syslinux' 'uefi-x64.systemd-boot')
 arch="x86_64"
 pacman_conf="pacman.conf"
 airootfs_image_type="squashfs"
@@ -160,6 +160,10 @@ lightdm-gtk-greeter
 # Additional tools
 bauh
 steam
+memtest86+
+memtest86+-efi
+edk2-shell
+syslinux
 
 # Audio system - PulseAudio
 pulseaudio

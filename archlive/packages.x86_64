@@ -19,6 +19,10 @@ lightdm-gtk-greeter
 # Additional tools
 bauh
 steam
+memtest86+
+memtest86+-efi
+edk2-shell
+syslinux
 
 # Audio system - PulseAudio
 pulseaudio

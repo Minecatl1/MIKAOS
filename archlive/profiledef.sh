@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC2034
 
-iso_name="custom-arch-linux"
-iso_label="CUSTOM_ARCH_$(date +%Y%m)"
-iso_publisher="Custom Arch Linux <https://github.com>"
-iso_application="Custom Arch Linux Live/Rescue CD"
+iso_name="gaming-arch-linux"
+iso_label="GAMING_ARCH_$(date +%Y%m)"
+iso_publisher="Custom built Arch Linux <https://github.com>"
+iso_application="Gaming Arch Linux Live/Rescue CD"
 iso_version="$(date +%Y.%m.%d)"
 install_dir="arch"
 buildmodes=('iso')
-bootmodes=('bios.syslinux.mbr' 'bios.syslinux.eltorito' 'uefi-x64.systemd-boot.esp' 'uefi-x64.systemd-boot.eltorito')
+bootmodes=('bios.syslinux' 'uefi-x64.systemd-boot')
 arch="x86_64"
 pacman_conf="pacman.conf"
 airootfs_image_type="squashfs"
