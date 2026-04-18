@@ -1,0 +1,89 @@
+name: Build Custom Arch ISO
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_tag:
+        description: 'Tag for the release (e.g., v1.0.0)'
+        required: true
+        default: 'latest'
+  push:
+    branches:
+      - main
+    paths:
+      - 'archlive/**'
+      - '.github/workflows/build-iso.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+      options: --privileged
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          pacman -Syu --noconfirm
+          pacman -S --noconfirm archiso git
+
+      - name: Build yay package for custom repo
+        run: |
+          # Build yay from AUR
+          pacman -S --noconfirm --needed base-devel
+          useradd -m builder
+          echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+          su - builder -c "cd /tmp && git clone https://aur.archlinux.org/yay.git && cd yay && makepkg -si --noconfirm"
+          # Create custom repo directory and copy the built package
+          mkdir -p /__w/${{ github.event.repository.name }}/${{ github.event.repository.name }}/archlive/custom_repo
+          cp /tmp/yay/*.pkg.tar.zst /__w/${{ github.event.repository.name }}/${{ github.event.repository.name }}/archlive/custom_repo/
+          cd /__w/${{ github.event.repository.name }}/${{ github.event.repository.name }}/archlive/custom_repo
+          repo-add custom_repo.db.tar.gz *.pkg.tar.zst
+        shell: bash
+
+      - name: Build the ISO
+        run: |
+          mkdir -p /tmp/archiso-tmp
+          mkarchiso -v -w /tmp/archiso-tmp -o . /__w/${{ github.event.repository.name }}/${{ github.event.repository.name }}/archlive
+        shell: bash
+
+      - name: Upload ISO artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: custom-arch-iso
+          path: ./*.iso
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Download ISO artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: custom-arch-iso
+
+      - name: Create Release and Upload ISO
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.version_tag }}
+          name: Custom Arch Linux ${{ github.event.inputs.version_tag }}
+          body: |
+            This release contains a custom Arch Linux ISO built on ${{ github.event.repository.updated_at }}.
+            
+            **Features:**
+            - Lightweight desktop (Xfce)
+            - yay AUR helper preinstalled
+            - Flatpak with Flathub remote
+            - Bauh GUI package manager
+            - Steam and Itch launchers in a "Game Launchers" desktop folder
+            
+            To use: Write the ISO to a USB drive using `dd` or balenaEtcher.
+          files: |
+            *.iso
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
