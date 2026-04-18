@@ -66,6 +66,8 @@ jobs:
 
       - name: Build the ISO
         run: |
+          cp -r /usr/share/archiso/configs/releng/syslinux /__w/${{ github.event.repository.name }}/${{ github.event.repository.name }}/archlive/
+          cp -r /usr/share/archiso/configs/releng/efiboot /__w/${{ github.event.repository.name }}/${{ github.event.repository.name }}/archlive/
           mkdir -p /tmp/archiso-tmp
           mkarchiso -v -w /tmp/archiso-tmp -o . /__w/${{ github.event.repository.name }}/${{ github.event.repository.name }}/archlive
         shell: bash
