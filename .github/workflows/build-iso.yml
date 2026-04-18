@@ -22,16 +22,7 @@ jobs:
       - name: Install build dependencies
         run: |
           pacman -Syu --noconfirm
-          pacman -S --noconfirm archiso git go sudo
-
-      - name: Free disk space on runner
-        run: |
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /opt/ghc
-          sudo rm -rf "/usr/local/share/boost"
-          sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /usr/share/swift
-          df -h
+          pacman -S --noconfirm archiso git
 
       - name: Build the ISO
         run: |
