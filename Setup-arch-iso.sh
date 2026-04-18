@@ -126,7 +126,7 @@ iso_application="Gaming Arch Linux Live/Rescue CD"
 iso_version="$(date +%Y.%m.%d)"
 install_dir="arch"
 buildmodes=('iso')
-bootmodes=('bios.syslinux' 'uefi-x64.systemd-boot')
+bootmodes=('bios.syslinux' 'uefi-x64.systemd-boot.esp')
 arch="x86_64"
 pacman_conf="pacman.conf"
 airootfs_image_type="squashfs"
@@ -204,6 +204,35 @@ Include = /etc/pacman.d/mirrorlist
 EOF
 
 echo "✅ Created archlive/airootfs/etc/pacman.conf"
+
+cat > "$BASE_DIR/archlive/pacman.conf" << 'EOF'
+[options]
+HoldPkg     = pacman glibc
+Architecture = auto
+Color
+CheckSpace
+ParallelDownloads = 5
+SigLevel    = Required DatabaseOptional
+LocalFileSigLevel = Optional
+
+[custom_repo]
+SigLevel = Optional TrustAll
+Server = file:///custom_repo
+
+[core]
+Include = /etc/pacman.d/mirrorlist
+
+[extra]
+Include = /etc/pacman.d/mirrorlist
+
+[community]
+Include = /etc/pacman.d/mirrorlist
+
+[multilib]
+Include = /etc/pacman.d/mirrorlist
+EOF
+
+echo "Made pacman.conf in archlive root"
 
 # ---------------------------------------------------------------------
 # 4. Post-installation customization script
