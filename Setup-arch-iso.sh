@@ -283,9 +283,9 @@ EOF
 echo "Made pacman.conf in archlive root"
 
 # Make the customization script executable
-chmod +x "$BASE_DIR/archlive/airootfs/root/customize_airootfs.sh"
+chmod +x "$BASE_DIR/archlive/airootfs/usr/local/bin/firstboot-setup.sh"
 
-echo "✅ Created and made executable: archlive/airootfs/root/customize_airootfs.sh"
+echo "✅ Created and made executable: archlive/airootfs/usr/local/bin/firstboot-setup.sh"
 
 # ---------------------------------------------------------------------
 # 5. (Optional) Initialize git repository and commit

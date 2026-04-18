@@ -27,3 +27,6 @@ syslinux
 pulseaudio
 pulseaudio-alsa
 pulseaudio-bluetooth
+
+# For Pacman
+go
