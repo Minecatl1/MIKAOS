@@ -8,6 +8,12 @@ systemctl enable lightdm.service
 sudo -u arch bash -c 'cd /tmp && git clone https://aur.archlinux.org/yay.git && cd yay && makepkg -si --noconfirm'
 rm -rf /tmp/yay
 
+# --- Install bauh (GUI Package Manager) using yay ---
+echo "Installing bauh from AUR..."
+sudo -u arch bash -c 'yay -S --noconfirm bauh'
+# Clean up yay cache to save space
+sudo -u arch bash -c 'yay -Sc --noconfirm'
+
 # --- Audio Setup ---
 systemctl --global enable pulseaudio
 
