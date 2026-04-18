@@ -210,48 +210,67 @@ echo "Made pacman.conf in archlive root"
 cat > "$BASE_DIR/archlive/airootfs/root/customize_airootfs.sh" << 'EOF'
 #!/bin/bash
 
-# Enable essential services
+set -e  # Stop on any error
+
+echo "==> Starting post-install customization..."
+
+# --- Enable essential services ---
 systemctl enable NetworkManager.service
 systemctl enable lightdm.service
 
-# --- Install yay AUR helper ---
-sudo -u arch bash -c 'cd /tmp && git clone https://aur.archlinux.org/yay.git && cd yay && makepkg -si --noconfirm'
-rm -rf /tmp/yay
-
-# --- Install bauh (GUI Package Manager) using yay ---
-echo "Installing bauh from AUR..."
-sudo -u arch bash -c 'yay -S --noconfirm bauh'
-# Clean up yay cache to save space
-sudo -u arch bash -c 'yay -Sc --noconfirm'
-
-# --- Audio Setup ---
+# --- Audio Setup (PulseAudio) ---
 systemctl --global enable pulseaudio
 
+# --- Create a temporary build user for AUR packages ---
+echo "==> Creating temporary build user..."
+useradd -m -s /bin/bash builduser
+echo "builduser ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+
+# --- Install yay (AUR helper) ---
+echo "==> Installing yay from AUR..."
+sudo -u builduser bash -c 'cd /tmp && git clone https://aur.archlinux.org/yay.git && cd yay && makepkg -si --noconfirm'
+rm -rf /tmp/yay
+
+# --- Install bauh using yay (yay can run as root) ---
+echo "==> Installing bauh from AUR..."
+yay -S --noconfirm bauh
+
+# --- Clean up temporary user and cache ---
+echo "==> Cleaning up temporary user and package caches..."
+userdel -r builduser
+sed -i '/builduser ALL=(ALL) NOPASSWD: ALL/d' /etc/sudoers
+yay -Sc --noconfirm
+
 # --- Flatpak Setup ---
+echo "==> Configuring Flatpak..."
 flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 
-# --- Install Itch launcher via Flatpak ---
-flatpak install -y flathub io.itch.itch
-flatpak install -y flathub com.opera.opera-gx
-flatpak install -y flathub org.vinegarhq.Sober
-flatpak install -y flathub dev.vencord.Vesktop
+# Install Flatpak applications (suppress non‑critical bwrap warnings)
+flatpak install --system -y flathub io.itch.itch 2>/dev/null || true
+flatpak install --system -y flathub com.opera.opera-gx 2>/dev/null || true
+flatpak install --system -y flathub org.vinegarhq.Sober 2>/dev/null || true
+flatpak install --system -y flathub dev.vencord.Vesktop 2>/dev/null || true
 
-# --- Create Game Launchers folder on desktop ---
-DESKTOP_DIR="/home/arch/Desktop"
-mkdir -p "$DESKTOP_DIR"
+# --- Create desktop launchers in /etc/skel (will appear for live user) ---
+echo "==> Setting up desktop launchers..."
+SKEL_DESKTOP="/etc/skel/Desktop"
+GAME_LAUNCHERS_DIR="$SKEL_DESKTOP/Game Launchers"
 
-# Symlink Steam and Itch desktop files
-ln -sf /usr/share/applications/steam.desktop "$DESKTOP_DIR/Game Launchers/steam.desktop"
-ln -sf /var/lib/flatpak/exports/share/applications/io.itch.itch.desktop "$DESKTOP_DIR/Game Launchers/io.itch.itch.desktop"
-ln -sf /var/lib/flatpak/exports/share/applications/com.opera.opera-gx.desktop "$DESKTOP_DIR/com.opera.opera-gx.desktop"
-ln -sf /var/lib/flatpak/exports/share/applications/org.vinegarhq.Sober.desktop "$DESKTOP_DIR/org.vinegarhq.Sober.desktop"
-ln -sf /var/lib/flatpak/exports/share/applications/dev.vencord.Vesktop.desktop "$DESKTOP_DIR/dev.vencord.Vesktop.desktop"
+mkdir -p "$GAME_LAUNCHERS_DIR"
 
-# Set correct ownership
-chown -R arch:arch "/home/arch/Desktop"
+# Steam and Itch in the Game Launchers folder
+ln -sf /usr/share/applications/steam.desktop "$GAME_LAUNCHERS_DIR/steam.desktop"
+ln -sf /var/lib/flatpak/exports/share/applications/io.itch.itch.desktop "$GAME_LAUNCHERS_DIR/io.itch.itch.desktop"
 
-# Optional: Inform user about AUR helper (yay) being available
+# Other apps directly on the desktop
+ln -sf /var/lib/flatpak/exports/share/applications/com.opera.opera-gx.desktop "$SKEL_DESKTOP/opera-gx.desktop"
+ln -sf /var/lib/flatpak/exports/share/applications/org.vinegarhq.Sober.desktop "$SKEL_DESKTOP/sober.desktop"
+ln -sf /var/lib/flatpak/exports/share/applications/dev.vencord.Vesktop.desktop "$SKEL_DESKTOP/vesktop.desktop"
+
+# --- Optional message for users ---
 echo "yay AUR helper is installed and ready to use." > /etc/motd
+
+echo "==> Customization complete!"
 EOF
 
 # Make the customization script executable
