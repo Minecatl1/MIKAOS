@@ -16,14 +16,6 @@ echo "==> Creating temporary build user..."
 useradd -m -s /bin/bash builduser
 echo "builduser ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
-# --- Install yay (AUR helper) ---
-echo "==> Installing yay from AUR..."
-sudo -u builduser bash -c 'cd /tmp && git clone https://aur.archlinux.org/yay.git && cd yay && makepkg -si --noconfirm'
-rm -rf /tmp/yay
-
-# --- Install bauh using yay (yay can run as root) ---
-echo "==> Installing bauh from AUR..."
-yay -S --noconfirm bauh
 
 # --- Clean up temporary user and cache ---
 echo "==> Cleaning up temporary user and package caches..."
