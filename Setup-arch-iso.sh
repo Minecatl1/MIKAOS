@@ -224,6 +224,9 @@ syslinux
 pulseaudio
 pulseaudio-alsa
 pulseaudio-bluetooth
+
+# For Pacman
+go
 EOF
 
 echo "✅ Created archlive/packages.x86_64"
