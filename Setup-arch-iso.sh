@@ -115,6 +115,29 @@ echo "✅ Created .github/workflows/build-iso.yml"
 # ---------------------------------------------------------------------
 # 2. Packages list
 # ---------------------------------------------------------------------
+cat > "$BASE_DIR/archlive/profiledef.sh" << 'EOF'
+#!/usr/bin/env bash
+# shellcheck disable=SC2034
+
+iso_name="gaming-arch-linux"
+iso_label="GAMING_ARCH_$(date +%Y%m)"
+iso_publisher="Custom built Arch Linux <https://github.com>"
+iso_application="Gaming Arch Linux Live/Rescue CD"
+iso_version="$(date +%Y.%m.%d)"
+install_dir="arch"
+buildmodes=('iso')
+bootmodes=('bios.syslinux.mbr' 'bios.syslinux.eltorito' 'uefi-x64.systemd-boot.esp' 'uefi-x64.systemd-boot.eltorito')
+arch="x86_64"
+pacman_conf="pacman.conf"
+airootfs_image_type="squashfs"
+airootfs_image_tool_options=('-comp' 'xz' '-Xbcj' 'x86' '-b' '1M' '-Xdict-size' '1M')
+file_permissions=(
+  ["/etc/shadow"]="0:0:400"
+  ["/root"]="0:0:750"
+  ["/root/customize_airootfs.sh"]="0:0:755"
+  ["/usr/local/bin/choose-mirror"]="0:0:755"
+)
+EOF
 cat > "$BASE_DIR/archlive/packages.x86_64" << 'EOF'
 # Base system
 base
@@ -196,6 +219,7 @@ flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flat
 
 # --- Install Itch launcher via Flatpak ---
 flatpak install -y flathub io.itch.itch
+flatpak install -y flathub com.opera.opera-gx
 
 # --- Create Game Launchers folder on desktop ---
 DESKTOP_DIR="/home/arch/Desktop/Game Launchers"
@@ -204,7 +228,7 @@ mkdir -p "$DESKTOP_DIR"
 # Symlink Steam and Itch desktop files
 ln -sf /usr/share/applications/steam.desktop "$DESKTOP_DIR/steam.desktop"
 ln -sf /var/lib/flatpak/exports/share/applications/io.itch.itch.desktop "$DESKTOP_DIR/io.itch.itch.desktop"
-
+ln -sf /var/lib/flatpak/exports/share/applications/com.opera.opera-gx.desktop "$DESKTOP_DIR/com.opera.opera-gx.desktop"
 # Set correct ownership
 chown -R arch:arch "/home/arch/Desktop"
 
