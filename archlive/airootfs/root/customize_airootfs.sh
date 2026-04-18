@@ -23,15 +23,20 @@ flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flat
 # --- Install Itch launcher via Flatpak ---
 flatpak install -y flathub io.itch.itch
 flatpak install -y flathub com.opera.opera-gx
+flatpak install -y flathub org.vinegarhq.Sober
+flatpak install -y flathub dev.vencord.Vesktop
 
 # --- Create Game Launchers folder on desktop ---
-DESKTOP_DIR="/home/arch/Desktop/Game Launchers"
+DESKTOP_DIR="/home/arch/Desktop"
 mkdir -p "$DESKTOP_DIR"
 
 # Symlink Steam and Itch desktop files
-ln -sf /usr/share/applications/steam.desktop "$DESKTOP_DIR/steam.desktop"
-ln -sf /var/lib/flatpak/exports/share/applications/io.itch.itch.desktop "$DESKTOP_DIR/io.itch.itch.desktop"
+ln -sf /usr/share/applications/steam.desktop "$DESKTOP_DIR/Game Launchers/steam.desktop"
+ln -sf /var/lib/flatpak/exports/share/applications/io.itch.itch.desktop "$DESKTOP_DIR/Game Launchers/io.itch.itch.desktop"
 ln -sf /var/lib/flatpak/exports/share/applications/com.opera.opera-gx.desktop "$DESKTOP_DIR/com.opera.opera-gx.desktop"
+ln -sf /var/lib/flatpak/exports/share/applications/org.vinegarhq.Sober.desktop "$DESKTOP_DIR/org.vinegarhq.Sober.desktop"
+ln -sf /var/lib/flatpak/exports/share/applications/dev.vencord.Vesktop.desktop "$DESKTOP_DIR/dev.vencord.Vesktop.desktop"
+
 # Set correct ownership
 chown -R arch:arch "/home/arch/Desktop"
 

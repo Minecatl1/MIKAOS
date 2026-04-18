@@ -7,12 +7,6 @@ on:
         description: 'Tag for the release (e.g., v1.0.0)'
         required: true
         default: 'latest'
-  push:
-    branches:
-      - main
-    paths:
-      - 'archlive/**'
-      - '.github/workflows/build-iso.yml'
 
 jobs:
   build:
