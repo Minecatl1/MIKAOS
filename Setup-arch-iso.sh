@@ -97,6 +97,81 @@ echo "✅ Created .github/workflows/build-iso.yml"
 # ---------------------------------------------------------------------
 # 2. Packages list
 # ---------------------------------------------------------------------
+cat > "$BASE_DIR/archlive/airootfs/usr/share/libalpm/hooks/enable-firstboot.hook" << 'EOF'
+[Trigger]
+Type = Package
+Operation = Install
+Operation = Upgrade
+Target = systemd
+
+[Action]
+Description = Enabling firstboot systemd service
+When = PostTransaction
+Exec = /usr/bin/systemctl enable firstboot.service
+EOF
+
+cat > "$BASE_DIR/archlive/airootfs/etc/systemd/system/firstboot.service" << 'EOF'
+[Unit]
+Description=First boot setup (install AUR packages, Flatpaks)
+After=network.target lightdm.service
+Before=display-manager.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/firstboot-setup.sh
+RemainAfterExit=no
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+cat > "$BASE_DIR/archlive/airootfs/usr/local/bin/firstboot-setup.sh" << 'EOF'
+#!/bin/bash
+set -e
+
+# Only run once
+FLAG_FILE="/var/lib/firstboot-done"
+if [ -f "$FLAG_FILE" ]; then
+    exit 0
+fi
+
+echo "Running first‑boot setup..."
+
+# Create temporary build user for AUR packages
+useradd -m -s /bin/bash builduser
+echo "builduser ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+
+# Install yay
+sudo -u builduser bash -c 'cd /tmp && git clone https://aur.archlinux.org/yay.git && cd yay && makepkg -si --noconfirm'
+rm -rf /tmp/yay
+
+# Install bauh with yay (as root, since yay is now installed)
+yay -S --noconfirm bauh
+
+# Cleanup
+userdel -r builduser
+sed -i '/builduser ALL=(ALL) NOPASSWD: ALL/d' /etc/sudoers
+yay -Sc --noconfirm
+
+# Configure Flatpak and install apps
+flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+flatpak install --system -y flathub io.itch.itch com.opera.opera-gx org.vinegarhq.Sober dev.vencord.Vesktop
+
+# Set up desktop launchers for the live user (arch)
+DESKTOP="/home/arch/Desktop"
+mkdir -p "$DESKTOP/Game Launchers"
+ln -sf /usr/share/applications/steam.desktop "$DESKTOP/Game Launchers/steam.desktop"
+ln -sf /var/lib/flatpak/exports/share/applications/io.itch.itch.desktop "$DESKTOP/Game Launchers/io.itch.itch.desktop"
+ln -sf /var/lib/flatpak/exports/share/applications/com.opera.opera-gx.desktop "$DESKTOP/opera-gx.desktop"
+ln -sf /var/lib/flatpak/exports/share/applications/org.vinegarhq.Sober.desktop "$DESKTOP/sober.desktop"
+ln -sf /var/lib/flatpak/exports/share/applications/dev.vencord.Vesktop.desktop "$DESKTOP/vesktop.desktop"
+chown -R arch:arch "$DESKTOP"
+
+# Mark completion
+touch "$FLAG_FILE"
+echo "First‑boot setup complete."
+EOF
+
 cat > "$BASE_DIR/archlive/profiledef.sh" << 'EOF'
 #!/usr/bin/env bash
 # shellcheck disable=SC2034
@@ -203,75 +278,6 @@ Include = /etc/pacman.d/mirrorlist
 EOF
 
 echo "Made pacman.conf in archlive root"
-
-# ---------------------------------------------------------------------
-# 4. Post-installation customization script
-# ---------------------------------------------------------------------
-cat > "$BASE_DIR/archlive/airootfs/root/customize_airootfs.sh" << 'EOF'
-#!/bin/bash
-
-set -e  # Stop on any error
-
-echo "==> Starting post-install customization..."
-
-# --- Enable essential services ---
-systemctl enable NetworkManager.service
-systemctl enable lightdm.service
-
-# --- Audio Setup (PulseAudio) ---
-systemctl --global enable pulseaudio
-
-# --- Create a temporary build user for AUR packages ---
-echo "==> Creating temporary build user..."
-useradd -m -s /bin/bash builduser
-echo "builduser ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
-
-# --- Install yay (AUR helper) ---
-echo "==> Installing yay from AUR..."
-sudo -u builduser bash -c 'cd /tmp && git clone https://aur.archlinux.org/yay.git && cd yay && makepkg -si --noconfirm'
-rm -rf /tmp/yay
-
-# --- Install bauh using yay (yay can run as root) ---
-echo "==> Installing bauh from AUR..."
-yay -S --noconfirm bauh
-
-# --- Clean up temporary user and cache ---
-echo "==> Cleaning up temporary user and package caches..."
-userdel -r builduser
-sed -i '/builduser ALL=(ALL) NOPASSWD: ALL/d' /etc/sudoers
-yay -Sc --noconfirm
-
-# --- Flatpak Setup ---
-echo "==> Configuring Flatpak..."
-flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
-
-# Install Flatpak applications (suppress non‑critical bwrap warnings)
-flatpak install --system -y flathub io.itch.itch 2>/dev/null || true
-flatpak install --system -y flathub com.opera.opera-gx 2>/dev/null || true
-flatpak install --system -y flathub org.vinegarhq.Sober 2>/dev/null || true
-flatpak install --system -y flathub dev.vencord.Vesktop 2>/dev/null || true
-
-# --- Create desktop launchers in /etc/skel (will appear for live user) ---
-echo "==> Setting up desktop launchers..."
-SKEL_DESKTOP="/etc/skel/Desktop"
-GAME_LAUNCHERS_DIR="$SKEL_DESKTOP/Game Launchers"
-
-mkdir -p "$GAME_LAUNCHERS_DIR"
-
-# Steam and Itch in the Game Launchers folder
-ln -sf /usr/share/applications/steam.desktop "$GAME_LAUNCHERS_DIR/steam.desktop"
-ln -sf /var/lib/flatpak/exports/share/applications/io.itch.itch.desktop "$GAME_LAUNCHERS_DIR/io.itch.itch.desktop"
-
-# Other apps directly on the desktop
-ln -sf /var/lib/flatpak/exports/share/applications/com.opera.opera-gx.desktop "$SKEL_DESKTOP/opera-gx.desktop"
-ln -sf /var/lib/flatpak/exports/share/applications/org.vinegarhq.Sober.desktop "$SKEL_DESKTOP/sober.desktop"
-ln -sf /var/lib/flatpak/exports/share/applications/dev.vencord.Vesktop.desktop "$SKEL_DESKTOP/vesktop.desktop"
-
-# --- Optional message for users ---
-echo "yay AUR helper is installed and ready to use." > /etc/motd
-
-echo "==> Customization complete!"
-EOF
 
 # Make the customization script executable
 chmod +x "$BASE_DIR/archlive/airootfs/root/customize_airootfs.sh"
