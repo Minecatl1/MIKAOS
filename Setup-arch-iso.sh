@@ -187,9 +187,6 @@ ParallelDownloads = 5
 SigLevel    = Required DatabaseOptional
 LocalFileSigLevel = Optional
 
-[custom_repo]
-SigLevel = Optional TrustAll
-Server = file:///custom_repo
 
 [core]
 Include = /etc/pacman.d/mirrorlist
@@ -197,8 +194,6 @@ Include = /etc/pacman.d/mirrorlist
 [extra]
 Include = /etc/pacman.d/mirrorlist
 
-[community]
-Include = /etc/pacman.d/mirrorlist
 
 [multilib]
 Include = /etc/pacman.d/mirrorlist
@@ -216,9 +211,6 @@ ParallelDownloads = 5
 SigLevel    = Required DatabaseOptional
 LocalFileSigLevel = Optional
 
-[custom_repo]
-SigLevel = Optional TrustAll
-Server = file:///custom_repo
 
 [core]
 Include = /etc/pacman.d/mirrorlist
@@ -226,8 +218,6 @@ Include = /etc/pacman.d/mirrorlist
 [extra]
 Include = /etc/pacman.d/mirrorlist
 
-[community]
-Include = /etc/pacman.d/mirrorlist
 
 [multilib]
 Include = /etc/pacman.d/mirrorlist
