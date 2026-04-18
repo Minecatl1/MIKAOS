@@ -50,20 +50,6 @@ jobs:
           pacman -Syu --noconfirm
           pacman -S --noconfirm archiso git
 
-      - name: Build yay package for custom repo
-        run: |
-          # Build yay from AUR
-          pacman -S --noconfirm --needed base-devel
-          useradd -m builder
-          echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
-          su - builder -c "cd /tmp && git clone https://aur.archlinux.org/yay.git && cd yay && makepkg -si --noconfirm"
-          # Create custom repo directory and copy the built package
-          mkdir -p /__w/${{ github.event.repository.name }}/${{ github.event.repository.name }}/archlive/custom_repo
-          cp /tmp/yay/*.pkg.tar.zst /__w/${{ github.event.repository.name }}/${{ github.event.repository.name }}/archlive/custom_repo/
-          cd /__w/${{ github.event.repository.name }}/${{ github.event.repository.name }}/archlive/custom_repo
-          repo-add custom_repo.db.tar.gz *.pkg.tar.zst
-        shell: bash
-
       - name: Build the ISO
         run: |
           cp -r /usr/share/archiso/configs/releng/syslinux /__w/${{ github.event.repository.name }}/${{ github.event.repository.name }}/archlive/
