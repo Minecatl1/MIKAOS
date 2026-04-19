@@ -11,8 +11,6 @@ systemctl enable lightdm.service
 # --- Audio Setup (PulseAudio) ---
 systemctl --global enable pulseaudio
 
-echo "==> Making grub config"
-grub-mkconfig -o /boot/grub/grub.cfg
 
 # Copy memtest86+ binary to ISO boot directory
 mkdir -p /arch/boot/memtest86+
