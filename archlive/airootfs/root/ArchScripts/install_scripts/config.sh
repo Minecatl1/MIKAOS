@@ -52,7 +52,7 @@ enable_display_manager()
     print_message ">>> Enabling display manager <<<"
 
     # Try enabling known display managers
-    display_managers=("plasmalogin" "sddm" "gdm")
+    display_managers=("plasmalogin" "sddm" "gdm" "xfce4")
 
     for manager in "${display_managers[@]}"; do
         systemctl list-unit-files ${manager}.service &>/dev/null && systemctl enable ${manager}.service && return
