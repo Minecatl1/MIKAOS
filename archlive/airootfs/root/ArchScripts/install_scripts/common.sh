@@ -14,7 +14,7 @@ ENV_PATH="${THIS_DIR}/env.sh"
 
 ### Installation options
 MOUNT_POINT="/mnt"
-CACHE_DIR="/root/pkg"
+CACHE_DIR="/root/archscripts-repo"
 PACMAN_PATH="/etc/pacman.conf"
 PACMAN_TMP="/tmp/pacman.conf"
 
