@@ -13,6 +13,8 @@ bash-completion
 less
 wl-clipboard
 grub
+dosfstools
+efibootmgr
 
 # Desktop Environment - Xfce (lightweight and customizable)
 xfce4
