@@ -86,7 +86,7 @@ jobs:
           test -f iso-mount/arch/boot/x86_64/initramfs-linux.img || { echo "ERROR: Initramfs missing!"; exit 1; }
           
           # Verify kernel is an ELF executable
-          file iso-mount/arch/boot/x86_64/vmlinuz-linux | grep -q "ELF" || { echo "ERROR: Kernel is not a valid ELF file!"; exit 1; }
+          file iso-mount/arch/boot/x86_64/vmlinuz-linux | grep -qE "Linux kernel|bzImage" || { echo "ERROR: Kernel is not a valid Linux kernel image!"; exit 1; }
           
           # Verify initramfs is a gzip compressed cpio archive (or zstd)
           file iso-mount/arch/boot/x86_64/initramfs-linux.img | grep -qE "gzip compressed|Zstandard compressed" || { echo "WARNING: Initramfs format unexpected."; }
