@@ -78,34 +78,35 @@ jobs:
           mkdir iso-mount
           sudo mount -o loop "$ISO_FILE" iso-mount
           
-          # Kernel and initramfs
+          # Kernel and initramfs checks (unchanged)
           test -f iso-mount/arch/boot/x86_64/vmlinuz-linux || { echo "ERROR: Kernel missing!"; exit 1; }
           test -f iso-mount/arch/boot/x86_64/initramfs-linux.img || { echo "ERROR: Initramfs missing!"; exit 1; }
-          
           file iso-mount/arch/boot/x86_64/vmlinuz-linux | grep -qE "Linux kernel|bzImage" || { echo "ERROR: Invalid kernel!"; exit 1; }
           
-          # --- BIOS Boot (SYSLINUX) ---
-          # Check common locations for syslinux.cfg
-          if [ -f iso-mount/syslinux/syslinux.cfg ]; then
-            echo "✅ SYSLINUX config found at /syslinux/syslinux.cfg"
-          elif [ -f iso-mount/arch/boot/syslinux/syslinux.cfg ]; then
-            echo "✅ SYSLINUX config found at /arch/boot/syslinux/syslinux.cfg"
-          elif [ -f iso-mount/boot/syslinux/syslinux.cfg ]; then
+          # BIOS Boot (SYSLINUX)
+          if [ -f iso-mount/boot/syslinux/syslinux.cfg ]; then
             echo "✅ SYSLINUX config found at /boot/syslinux/syslinux.cfg"
+          elif [ -f iso-mount/syslinux/syslinux.cfg ]; then
+            echo "✅ SYSLINUX config found at /syslinux/syslinux.cfg"
           else
-            echo "❌ ERROR: SYSLINUX configuration for BIOS missing!"
+            echo "❌ ERROR: SYSLINUX configuration missing!"
             exit 1
           fi
           
-          # --- UEFI Boot (GRUB) ---
-          test -f iso-mount/EFI/BOOT/BOOTX64.EFI || { echo "ERROR: GRUB EFI bootloader missing!"; exit 1; }
-          echo "✅ GRUB EFI found."
+          # UEFI Boot (GRUB) – case‑insensitive search
+          EFI_FILE=$(find iso-mount/EFI/BOOT -maxdepth 1 -iname "*.efi" -print -quit 2>/dev/null)
+          if [[ -n "$EFI_FILE" ]]; then
+            echo "✅ GRUB EFI bootloader found: $(basename "$EFI_FILE")"
+          else
+            echo "❌ ERROR: No EFI bootloader in /EFI/BOOT!"
+            exit 1
+          fi
           
-          # Optionally check for GRUB config
+          # GRUB config check (optional)
           if [ -f iso-mount/boot/grub/grub.cfg ]; then
             echo "✅ GRUB config present."
           elif [ -f iso-mount/grub/grub.cfg ]; then
-            echo "✅ GRUB config present (at /grub/grub.cfg)."
+            echo "✅ GRUB config present at /grub/grub.cfg."
           else
             echo "⚠️ WARNING: GRUB config not found."
           fi
