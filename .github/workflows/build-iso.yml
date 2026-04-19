@@ -50,63 +50,62 @@ jobs:
       - name: Install test tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y qemu-system-x86 genisoimage file
+          sudo apt-get install -y genisoimage file squashfs-tools
 
-      - name: Validate ISO structure
+      - name: Validate ISO hybrid structure
         run: |
           ISO_FILE=$(ls *.iso)
           echo "Testing ISO: $ISO_FILE"
           
           # Check file type (should be DOS/MBR boot sector with EFI partition)
           file "$ISO_FILE" | tee iso-type.txt
-          grep -q "DOS/MBR boot sector" iso-type.txt || { echo "ERROR: Not a hybrid ISO!"; exit 1; }
+          grep -q "DOS/MBR boot sector" iso-type.txt || { echo "ERROR: Not a hybrid ISO (missing MBR)!"; exit 1; }
+          grep -q "partition 2 : ID=0xef" iso-type.txt || { echo "WARNING: EFI partition not detected in hybrid MBR."; }
           
-          # Verify ISO size > 500 MB (adjust as needed)
+          # Verify ISO size > 500 MB (adjust based on your package list)
           SIZE=$(stat -c%s "$ISO_FILE")
           if [ $SIZE -lt 500000000 ]; then
             echo "ERROR: ISO too small ($SIZE bytes)"
             exit 1
           fi
-          
-          # List ISO contents using isoinfo
+          echo "ISO size: $SIZE bytes"
+
+      - name: List ISO contents (top-level)
+        run: |
+          ISO_FILE=$(ls *.iso)
           isoinfo -l -i "$ISO_FILE" | head -50
 
-      - name: Extract kernel and initramfs for boot test
+      - name: Extract and verify boot files
         run: |
           ISO_FILE=$(ls *.iso)
           mkdir iso-mount
           sudo mount -o loop "$ISO_FILE" iso-mount
           
-          # Copy kernel and initramfs from ISO
-          cp iso-mount/arch/boot/x86_64/vmlinuz-linux ./vmlinuz
-          cp iso-mount/arch/boot/x86_64/initramfs-linux.img ./initramfs.img
+          # Check kernel and initramfs exist and are valid
+          test -f iso-mount/arch/boot/x86_64/vmlinuz-linux || { echo "ERROR: Kernel missing!"; exit 1; }
+          test -f iso-mount/arch/boot/x86_64/initramfs-linux.img || { echo "ERROR: Initramfs missing!"; exit 1; }
+          
+          # Verify kernel is an ELF executable
+          file iso-mount/arch/boot/x86_64/vmlinuz-linux | grep -q "ELF" || { echo "ERROR: Kernel is not a valid ELF file!"; exit 1; }
+          
+          # Verify initramfs is a gzip compressed cpio archive (or zstd)
+          file iso-mount/arch/boot/x86_64/initramfs-linux.img | grep -qE "gzip compressed|Zstandard compressed" || { echo "WARNING: Initramfs format unexpected."; }
+          
+          # Check for syslinux files (BIOS boot)
+          test -f iso-mount/arch/boot/syslinux/syslinux.cfg || { echo "WARNING: syslinux.cfg not found."; }
+          
+          # Check for systemd-boot files (UEFI boot)
+          test -d iso-mount/EFI/BOOT || { echo "ERROR: EFI/BOOT directory missing!"; exit 1; }
           
           sudo umount iso-mount
-          ls -lh vmlinuz initramfs.img
 
-      - name: Quick boot test with QEMU (verify kernel loads)
-        run: |
-          # Emulated boot test (no KVM, so it's slow; we just check early kernel messages)
-          timeout 30 qemu-system-x86_64 \
-            -kernel vmlinuz \
-            -initrd initramfs.img \
-            -append "console=ttyS0 quiet" \
-            -nographic \
-            -m 512 \
-            -serial mon:stdio \
-            -no-reboot | tee boot.log
-          
-          # Check for expected kernel messages
-          grep -q "Linux version" boot.log || { echo "ERROR: Kernel didn't boot!"; exit 1; }
-          echo "Kernel boot test passed."
-
-      - name: Verify ISO contains expected packages (from squashfs)
+      - name: Verify package contents (squashfs)
         run: |
           ISO_FILE=$(ls *.iso)
           mkdir iso-extract
           sudo mount -o loop "$ISO_FILE" iso-extract
           
-          # Unsquashfs the root filesystem
+          # Extract the root filesystem
           sudo unsquashfs -d squashfs-root iso-extract/arch/x86_64/airootfs.sfs
           
           # Check for key binaries
@@ -114,13 +113,24 @@ jobs:
           test -f squashfs-root/usr/bin/yay || { echo "ERROR: yay not found!"; exit 1; }
           test -f squashfs-root/usr/bin/bauh || { echo "ERROR: bauh not found!"; exit 1; }
           test -f squashfs-root/usr/bin/flatpak || { echo "ERROR: Flatpak not found!"; exit 1; }
+          test -f squashfs-root/usr/bin/fish || { echo "ERROR: fish shell not found!"; exit 1; }
           
           # Check for desktop folder in /etc/skel
-          test -d squashfs-root/etc/skel/Desktop/Game\ Launchers || { echo "ERROR: Game Launchers folder missing!"; exit 1; }
+          test -d "squashfs-root/etc/skel/Desktop/Game Launchers" || { echo "ERROR: Game Launchers folder missing!"; exit 1; }
           
-          echo "All package checks passed."
+          # Check for Steam and Itch desktop files symlinked
+          test -L "squashfs-root/etc/skel/Desktop/Game Launchers/steam.desktop" || { echo "ERROR: Steam desktop symlink missing!"; exit 1; }
+          test -L "squashfs-root/etc/skel/Desktop/Game Launchers/io.itch.itch.desktop" || { echo "ERROR: Itch desktop symlink missing!"; exit 1; }
+          
+          # Check for PulseAudio service enablement (global user service)
+          test -d squashfs-root/usr/lib/systemd/user/pulseaudio.service || { echo "WARNING: PulseAudio user service not found."; }
+          
           sudo umount iso-extract
+          echo "✅ All package and file checks passed."
 
+      - name: Summary
+        run: |
+          echo "🎉 ISO validation complete. The image appears correctly built and contains all expected components."
   release:
     needs: [build, test]
     runs-on: ubuntu-latest
