@@ -38,8 +38,91 @@ jobs:
           name: custom-arch-iso
           path: ./*.iso
 
-  release:
+  test:
     needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download ISO artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: custom-arch-iso
+
+      - name: Install test tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qemu-system-x86 genisoimage file
+
+      - name: Validate ISO structure
+        run: |
+          ISO_FILE=$(ls *.iso)
+          echo "Testing ISO: $ISO_FILE"
+          
+          # Check file type (should be DOS/MBR boot sector with EFI partition)
+          file "$ISO_FILE" | tee iso-type.txt
+          grep -q "DOS/MBR boot sector" iso-type.txt || { echo "ERROR: Not a hybrid ISO!"; exit 1; }
+          
+          # Verify ISO size > 500 MB (adjust as needed)
+          SIZE=$(stat -c%s "$ISO_FILE")
+          if [ $SIZE -lt 500000000 ]; then
+            echo "ERROR: ISO too small ($SIZE bytes)"
+            exit 1
+          fi
+          
+          # List ISO contents using isoinfo
+          isoinfo -l -i "$ISO_FILE" | head -50
+
+      - name: Extract kernel and initramfs for boot test
+        run: |
+          ISO_FILE=$(ls *.iso)
+          mkdir iso-mount
+          sudo mount -o loop "$ISO_FILE" iso-mount
+          
+          # Copy kernel and initramfs from ISO
+          cp iso-mount/arch/boot/x86_64/vmlinuz-linux ./vmlinuz
+          cp iso-mount/arch/boot/x86_64/initramfs-linux.img ./initramfs.img
+          
+          sudo umount iso-mount
+          ls -lh vmlinuz initramfs.img
+
+      - name: Quick boot test with QEMU (verify kernel loads)
+        run: |
+          # Emulated boot test (no KVM, so it's slow; we just check early kernel messages)
+          timeout 30 qemu-system-x86_64 \
+            -kernel vmlinuz \
+            -initrd initramfs.img \
+            -append "console=ttyS0 quiet" \
+            -nographic \
+            -m 512 \
+            -serial mon:stdio \
+            -no-reboot | tee boot.log
+          
+          # Check for expected kernel messages
+          grep -q "Linux version" boot.log || { echo "ERROR: Kernel didn't boot!"; exit 1; }
+          echo "Kernel boot test passed."
+
+      - name: Verify ISO contains expected packages (from squashfs)
+        run: |
+          ISO_FILE=$(ls *.iso)
+          mkdir iso-extract
+          sudo mount -o loop "$ISO_FILE" iso-extract
+          
+          # Unsquashfs the root filesystem
+          sudo unsquashfs -d squashfs-root iso-extract/arch/x86_64/airootfs.sfs
+          
+          # Check for key binaries
+          test -f squashfs-root/usr/bin/steam || { echo "ERROR: Steam not found!"; exit 1; }
+          test -f squashfs-root/usr/bin/yay || { echo "ERROR: yay not found!"; exit 1; }
+          test -f squashfs-root/usr/bin/bauh || { echo "ERROR: bauh not found!"; exit 1; }
+          test -f squashfs-root/usr/bin/flatpak || { echo "ERROR: Flatpak not found!"; exit 1; }
+          
+          # Check for desktop folder in /etc/skel
+          test -d squashfs-root/etc/skel/Desktop/Game\ Launchers || { echo "ERROR: Game Launchers folder missing!"; exit 1; }
+          
+          echo "All package checks passed."
+          sudo umount iso-extract
+
+  release:
+    needs: [build, test]
     runs-on: ubuntu-latest
     steps:
       - name: Download ISO artifact
