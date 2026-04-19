@@ -9,12 +9,25 @@ fish
 flatpak
 git
 networkmanager
+bash-completion
+less
+wl-clipboard
+
 
 # Desktop Environment - Xfce (lightweight and customizable)
 xfce4
 xfce4-goodies
 lightdm
 lightdm-gtk-greeter
+xsel
+gvfs
+catfish
+sdl2
+jack
+gspell
+xiccd
+xdg-desktop-portal-impl
+mtools
 
 # Additional tools
 steam
