@@ -21,7 +21,6 @@ echo "builduser ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 echo "==> Cleaning up temporary user and package caches..."
 userdel -r builduser
 sed -i '/builduser ALL=(ALL) NOPASSWD: ALL/d' /etc/sudoers
-yay -Sc --noconfirm
 
 # --- Flatpak Setup ---
 echo "==> Configuring Flatpak..."
