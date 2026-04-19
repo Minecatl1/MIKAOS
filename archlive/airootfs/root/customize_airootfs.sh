@@ -11,6 +11,9 @@ systemctl enable lightdm.service
 # --- Audio Setup (PulseAudio) ---
 systemctl --global enable pulseaudio
 
+echo "==> Making grub config"
+grub-mkconfig -o /boot/grub/grub.cfg
+
 # --- Create a temporary build user for AUR packages ---
 echo "==> Creating temporary build user..."
 useradd -m -s /bin/bash builduser
