@@ -15,7 +15,11 @@ fi
 
 PROFILE_DIR="$REPO_ROOT/archlive"
 WORK_DIR="/tmp/archiso-tmp"
-OUTPUT_DIR="$REPO_ROOT"
+OUTPUT_DIR="${OUTPUT_DIR:-$REPO_ROOT}"
+
+if [[ -n "${OUTPUT_DIR:-}" ]]; then
+    echo "==> Using output directory: $OUTPUT_DIR"
+fi
 
 # --- Optional: Custom tooling (if you have these utilities) ---
 source "${PROFILE_DIR}/utilities/directories.sh" 2>/dev/null || true
@@ -23,7 +27,7 @@ source "${PROFILE_DIR}/utilities/directories.sh" 2>/dev/null || true
 # run_once update_archscripts || true
 # run_once make_local_repo || true
 
-source "${PROFILE_DIR}/airootfs/root/ArchScripts/setup.sh" || true
+source "${PROFILE_DIR}/install.sh" || true
 
 # --- Ensure required packages are installed ---
 echo "==> Checking build dependencies..."
