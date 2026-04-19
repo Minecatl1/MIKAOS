@@ -1,0 +1,1 @@
+RECIPE_PKGS="xfce4 xfce4-goodies lightdm lightdm-gtk-greeter"
