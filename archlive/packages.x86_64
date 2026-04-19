@@ -12,7 +12,7 @@ networkmanager
 bash-completion
 less
 wl-clipboard
-
+grub
 
 # Desktop Environment - Xfce (lightweight and customizable)
 xfce4
