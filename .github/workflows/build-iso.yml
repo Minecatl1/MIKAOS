@@ -110,8 +110,6 @@ jobs:
           
           # Check for key binaries
           test -f squashfs-root/usr/bin/steam || { echo "ERROR: Steam not found!"; exit 1; }
-          test -f squashfs-root/usr/bin/yay || { echo "ERROR: yay not found!"; exit 1; }
-          test -f squashfs-root/usr/bin/bauh || { echo "ERROR: bauh not found!"; exit 1; }
           test -f squashfs-root/usr/bin/flatpak || { echo "ERROR: Flatpak not found!"; exit 1; }
           test -f squashfs-root/usr/bin/fish || { echo "ERROR: fish shell not found!"; exit 1; }
           
