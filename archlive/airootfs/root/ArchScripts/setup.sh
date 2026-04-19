@@ -10,7 +10,7 @@ INSTALL_SCRIPTS_DIR="/root/ArchScripts/install_scripts"   # Scripts to copy into
 USER_SCRIPTS_DIR="/root/ArchScripts/user_scripts"         # User scripts to copy
 ENV_PATH="${BASE_DIR}/install.conf"           # Configuration file
 MOUNT_POINT="${MOUNT_POINT:-/mnt}"            # Target mount point (can be overridden)
-CACHE_DIR="/custom_repo"                      # Local package cache (if using offline install)
+CACHE_DIR="/root/archscripts-repo"                      # Local package cache (if using offline install)
 
 # --- Source common functions if available ---
 if [[ -f "${BASE_DIR}/install_scripts/install.sh" ]]; then
