@@ -14,6 +14,10 @@ systemctl --global enable pulseaudio
 echo "==> Making grub config"
 grub-mkconfig -o /boot/grub/grub.cfg
 
+# Copy memtest86+ binary to ISO boot directory
+mkdir -p /arch/boot/memtest86+
+cp /usr/share/memtest86+/memtest.bin /arch/boot/memtest86+/memtest.bin 2>/dev/null || echo "Memtest86+ not found"
+
 # --- Create a temporary build user for AUR packages ---
 echo "==> Creating temporary build user..."
 useradd -m -s /bin/bash builduser
