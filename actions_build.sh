@@ -18,7 +18,7 @@ WORK_DIR="/tmp/archiso-tmp"
 OUTPUT_DIR="$REPO_ROOT"
 
 # --- Optional: Custom tooling (if you have these utilities) ---
-# source "${PROFILE_DIR}/utilities/directories.sh" 2>/dev/null || true
+source "${PROFILE_DIR}/utilities/directories.sh" 2>/dev/null || true
 # source "${PROFILE_DIR}/utilities/custom_tools.sh" 2>/dev/null || true
 # run_once update_archscripts || true
 # run_once make_local_repo || true
