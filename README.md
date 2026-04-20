@@ -1,6 +1,6 @@
 # MIKAOS
-fork to install android
+a arch os with flatpak, steam,vesktop, and open gx preinstalled
 
-the command to install android is "
-cd android
-make install android "
+# INSTALLATION
+
+Run 

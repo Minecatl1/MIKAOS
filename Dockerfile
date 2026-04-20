@@ -9,4 +9,4 @@ RUN chmod +x ./actions_build.sh
 
 ENV OUTPUT_DIR=/iso-output
 
-CMD ["./actions_build.sh"]
+CMD ["bash", "-lc", "./actions_build.sh && tail -f /dev/null"]
