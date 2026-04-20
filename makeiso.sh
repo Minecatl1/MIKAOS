@@ -1,5 +1,4 @@
 #!/bin/bash
-newgrp docker
 docker build -t mikaos-achiso-builder .
 echo "Build completed. Starting container to build ISO..."
 sleep 3
