@@ -1,176 +1,146 @@
-name: Build Custom Arch ISO
+name: Build MIKAOS Arch Image
 
 on:
   workflow_dispatch:
     inputs:
-      version_tag:
-        description: 'Tag for the release (e.g., v1.0.0)'
+      kernel_version:
+        description: Kernel version to build. Patch versions download/apply the matching upstream patch.
         required: true
-        default: 'latest'
+        default: 7.0.3
+      kernel_type:
+        description: Kernel config profile.
+        required: true
+        default: minimal
+        type: choice
+        options:
+          - minimal
+          - standard
+      desktop:
+        description: Desktop environment to install.
+        required: true
+        default: openbox
+        type: choice
+        options:
+          - none
+          - openbox
+          - lxde
+          - xfce
+          - mate
+          - lxqt
+          - kde
+          - gnome
+          - hyprland
+      with_network:
+        description: Include networking packages.
+        required: true
+        default: 'yes'
+        type: choice
+        options:
+          - 'yes'
+          - 'no'
+      with_wifi:
+        description: Include Wi-Fi / NetworkManager packages.
+        required: true
+        default: 'no'
+        type: choice
+        options:
+          - 'yes'
+          - 'no'
+      with_bluetooth:
+        description: Include Bluetooth packages.
+        required: true
+        default: 'no'
+        type: choice
+        options:
+          - 'yes'
+          - 'no'
+      with_audio:
+        description: Include PipeWire audio packages.
+        required: true
+        default: 'no'
+        type: choice
+        options:
+          - 'yes'
+          - 'no'
+      iso_name:
+        description: Output ISO filename.
+        required: true
+        default: mikaos-arch.iso
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-mikaos-arch-image-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  build:
+  validate:
+    name: Validate build files
     runs-on: ubuntu-latest
-    container:
-      image: archlinux:latest
-      options: --privileged
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Run Makefile and shell syntax checks
+        run: make check
 
-      - name: Install build dependencies
+  build-image:
+    name: Build bootable ISO image
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    env:
+      ISO_NAME: ${{ inputs.iso_name || 'mikaos-arch.iso' }}
+      KERNEL_VERSION: ${{ inputs.kernel_version || '7.0.3' }}
+      KERNEL_TYPE: ${{ inputs.kernel_type || 'minimal' }}
+      DESKTOP: ${{ inputs.desktop || 'openbox' }}
+      WITH_NETWORK: ${{ inputs.with_network || 'yes' }}
+      WITH_WIFI: ${{ inputs.with_wifi || 'no' }}
+      WITH_BLUETOOTH: ${{ inputs.with_bluetooth || 'no' }}
+      WITH_AUDIO: ${{ inputs.with_audio || 'no' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Show Docker environment
+        run: docker version
+
+      - name: Write non-interactive build configuration
         run: |
-          pacman -Syu --noconfirm
-          pacman -S --noconfirm archiso git grub syslinux sudo
+          cat > .config <<EOF_CONFIG
+          DESKTOP=${DESKTOP}
+          WITH_NETWORK=${WITH_NETWORK}
+          WITH_WIFI=${WITH_WIFI}
+          WITH_BLUETOOTH=${WITH_BLUETOOTH}
+          WITH_AUDIO=${WITH_AUDIO}
+          KERNEL_TYPE=${KERNEL_TYPE}
+          USERNAME=arch
+          USER_PASS=
+          HOSTNAME=archbox
+          ROOT_PASS=
+          KERNEL_VERSION=${KERNEL_VERSION}
+          EOF_CONFIG
+          sed -n '1,120p' .config
 
-      - name: Build the ISO
+      - name: Build ISO image with Makefile Docker flow
         run: |
-          chmod +x actions_build.sh && sudo chmod +x actions_build.sh && sudo ./actions_build.sh
-        shell: bash
+          make docker-build \
+            ISO_NAME="${ISO_NAME}" \
+            DOCKER_IMAGE="mikaos-arch-builder:${GITHUB_SHA}"
 
-      - name: Upload ISO artifact
+      - name: Generate checksum
+        run: |
+          test -s "out/${ISO_NAME}"
+          sha256sum "out/${ISO_NAME}" | tee out/SHA256SUMS
+          ls -lh out
+
+      - name: Upload ISO image artifact
         uses: actions/upload-artifact@v4
         with:
-          name: custom-arch-iso
-          path: ./*.iso
-
-  test:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download ISO artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: custom-arch-iso
-
-      - name: Install test tools
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y genisoimage file squashfs-tools
-
-      - name: Validate ISO hybrid structure
-        run: |
-          ISO_FILE=$(ls *.iso)
-          echo "Testing ISO: $ISO_FILE"
-          
-          # Check file type (should be DOS/MBR boot sector with EFI partition)
-          file "$ISO_FILE" | tee iso-type.txt
-          grep -q "DOS/MBR boot sector" iso-type.txt || { echo "ERROR: Not a hybrid ISO (missing MBR)!"; exit 1; }
-          grep -q "partition 2 : ID=0xef" iso-type.txt || { echo "WARNING: EFI partition not detected in hybrid MBR."; }
-          
-          # Verify ISO size > 500 MB (adjust based on your package list)
-          SIZE=$(stat -c%s "$ISO_FILE")
-          if [ $SIZE -lt 500000000 ]; then
-            echo "ERROR: ISO too small ($SIZE bytes)"
-            exit 1
-          fi
-          echo "ISO size: $SIZE bytes"
-
-      - name: List ISO contents (top-level)
-        run: |
-          ISO_FILE=$(ls *.iso)
-          isoinfo -l -i "$ISO_FILE" | head -50
-
-      - name: Extract and verify boot files
-        run: |
-          ISO_FILE=$(ls *.iso)
-          mkdir iso-mount
-          sudo mount -o loop "$ISO_FILE" iso-mount
-          
-          # Kernel and initramfs checks (unchanged)
-          test -f iso-mount/arch/boot/x86_64/vmlinuz-linux || { echo "ERROR: Kernel missing!"; exit 1; }
-          test -f iso-mount/arch/boot/x86_64/initramfs-linux.img || { echo "ERROR: Initramfs missing!"; exit 1; }
-          file iso-mount/arch/boot/x86_64/vmlinuz-linux | grep -qE "Linux kernel|bzImage" || { echo "ERROR: Invalid kernel!"; exit 1; }
-          
-          # BIOS Boot (SYSLINUX)
-          if [ -f iso-mount/boot/syslinux/syslinux.cfg ]; then
-            echo "✅ SYSLINUX config found at /boot/syslinux/syslinux.cfg"
-          elif [ -f iso-mount/syslinux/syslinux.cfg ]; then
-            echo "✅ SYSLINUX config found at /syslinux/syslinux.cfg"
-          else
-            echo "❌ ERROR: SYSLINUX configuration missing!"
-            exit 1
-          fi
-          
-          # UEFI Boot (GRUB) – case‑insensitive search
-          EFI_FILE=$(find iso-mount/EFI/BOOT -maxdepth 1 -iname "*.efi" -print -quit 2>/dev/null)
-          if [[ -n "$EFI_FILE" ]]; then
-            echo "✅ GRUB EFI bootloader found: $(basename "$EFI_FILE")"
-          else
-            echo "❌ ERROR: No EFI bootloader in /EFI/BOOT!"
-            exit 1
-          fi
-          
-          # GRUB config check (optional)
-          if [ -f iso-mount/boot/grub/grub.cfg ]; then
-            echo "✅ GRUB config present."
-          elif [ -f iso-mount/grub/grub.cfg ]; then
-            echo "✅ GRUB config present at /grub/grub.cfg."
-          else
-            echo "⚠️ WARNING: GRUB config not found."
-          fi
-          
-          sudo umount iso-mount
-
-      - name: Verify package contents (squashfs)
-        run: |
-          ISO_FILE=$(ls *.iso)
-          mkdir iso-extract
-          sudo mount -o loop "$ISO_FILE" iso-extract
-          
-          # Extract the root filesystem
-          sudo unsquashfs -d squashfs-root iso-extract/arch/x86_64/airootfs.sfs
-          
-          # Check for key binaries
-          test -f squashfs-root/usr/bin/steam || { echo "ERROR: Steam not found!"; exit 1; }
-          test -f squashfs-root/usr/bin/flatpak || { echo "ERROR: Flatpak not found!"; exit 1; }
-          test -f squashfs-root/usr/bin/fish || { echo "ERROR: fish shell not found!"; exit 1; }
-          
-          # Check for desktop folder in /etc/skel
-          test -d "squashfs-root/etc/skel/Desktop/Game Launchers" || { echo "ERROR: Game Launchers folder missing!"; exit 1; }
-          
-          # Check for Steam and Itch desktop files symlinked
-          test -L "squashfs-root/etc/skel/Desktop/Game Launchers/steam.desktop" || { echo "ERROR: Steam desktop symlink missing!"; exit 1; }
-          test -L "squashfs-root/etc/skel/Desktop/Game Launchers/io.itch.itch.desktop" || { echo "ERROR: Itch desktop symlink missing!"; exit 1; }
-          
-          # Check for PulseAudio service enablement (global user service)
-          test -d squashfs-root/usr/lib/systemd/user/pulseaudio.service || { echo "WARNING: PulseAudio user service not found."; }
-          
-          sudo umount iso-extract
-          echo "✅ All package and file checks passed."
-
-      - name: Summary
-        run: |
-          echo "🎉 ISO validation complete. The image appears correctly built and contains all expected components."
-  release:
-    needs: [build, test]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download ISO artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: custom-arch-iso
-
-      - name: Create Release and Upload ISO
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.event.inputs.version_tag }}
-          name: Custom Arch Linux ${{ github.event.inputs.version_tag }}
-          body: |
-            This release contains a custom Arch Linux ISO built on ${{ github.event.repository.updated_at }}.
-            
-            **Features:**
-            - Lightweight desktop (Xfce)
-            - yay AUR helper preinstalled
-            - Flatpak with Flathub remote
-            - Bauh GUI package manager
-            - Steam and Itch launchers in a "Game Launchers" desktop folder
-            
-            To use: Write the ISO to a USB drive using `dd` or balenaEtcher.
-          files: |
-            *.iso
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          name: mikaos-arch-image
+          path: |
+            out/*.iso
+            out/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 14
