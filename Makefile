@@ -175,7 +175,16 @@ ifeq ($(SKIP_HOST_CHECK),0)
 endif
 	@echo '==> Bootstrapping Arch Linux base system...'
 	$(SUDO) mkdir -p '$(ROOTFS)'
-	$(SUDO) pacstrap -K -c -M '$(ROOTFS)' base base-devel arch-install-scripts sudo --noconfirm
+	$(SUDO) pacstrap -K -c -M '$(ROOTFS)' base base-devel arch-install-scripts sudo
+	$(SUDO) install -d '$(ROOTFS)/etc'
+	@if [ ! -f '$(ROOTFS)/etc/pacman.conf' ]; then \
+		echo '==> pacstrap did not create /etc/pacman.conf; seeding one for the target rootfs...'; \
+		if [ -f /etc/pacman.conf ]; then \
+			$(SUDO) cp /etc/pacman.conf '$(ROOTFS)/etc/pacman.conf'; \
+		else \
+			printf '%s\n' '[options]' '#ParallelDownloads = 5' 'SigLevel = Required DatabaseOptional' 'LocalFileSigLevel = Optional' 'Architecture = auto' > '$(ROOTFS)/etc/pacman.conf'; \
+		fi; \
+	fi
 	$(SUDO) sed -i 's/^#ParallelDownloads/ParallelDownloads/' '$(ROOTFS)/etc/pacman.conf'
 
 kernel: base ## Build and install the configured Linux kernel.
