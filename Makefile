@@ -175,14 +175,22 @@ ifeq ($(SKIP_HOST_CHECK),0)
 endif
 	@echo '==> Bootstrapping Arch Linux base system...'
 	$(SUDO) mkdir -p '$(ROOTFS)'
-	$(SUDO) pacstrap -K -c -M '$(ROOTFS)' base base-devel arch-install-scripts sudo
-	$(SUDO) install -d '$(ROOTFS)/etc'
+	$(SUDO) pacstrap -K -c '$(ROOTFS)' base base-devel arch-install-scripts sudo
+	$(SUDO) install -d '$(ROOTFS)/etc/pacman.d'
 	@if [ ! -f '$(ROOTFS)/etc/pacman.conf' ]; then \
 		echo '==> pacstrap did not create /etc/pacman.conf; seeding one for the target rootfs...'; \
 		if [ -f /etc/pacman.conf ]; then \
 			$(SUDO) cp /etc/pacman.conf '$(ROOTFS)/etc/pacman.conf'; \
 		else \
-			printf '%s\n' '[options]' '#ParallelDownloads = 5' 'SigLevel = Required DatabaseOptional' 'LocalFileSigLevel = Optional' 'Architecture = auto' > '$(ROOTFS)/etc/pacman.conf'; \
+			printf '%s\n' '[options]' '#ParallelDownloads = 5' 'SigLevel = Required DatabaseOptional' 'LocalFileSigLevel = Optional' 'Architecture = auto' '' '[core]' 'Include = /etc/pacman.d/mirrorlist' '' '[extra]' 'Include = /etc/pacman.d/mirrorlist' > '$(ROOTFS)/etc/pacman.conf'; \
+		fi; \
+	fi
+	@if [ ! -s '$(ROOTFS)/etc/pacman.d/mirrorlist' ]; then \
+		echo '==> pacstrap did not create /etc/pacman.d/mirrorlist; seeding one for the target rootfs...'; \
+		if [ -s /etc/pacman.d/mirrorlist ]; then \
+			$(SUDO) cp /etc/pacman.d/mirrorlist '$(ROOTFS)/etc/pacman.d/mirrorlist'; \
+		else \
+			printf '%s\n' 'Server = https://geo.mirror.pkgbuild.com/$$repo/os/$$arch' 'Server = https://mirror.rackspace.com/archlinux/$$repo/os/$$arch' > '$(ROOTFS)/etc/pacman.d/mirrorlist'; \
 		fi; \
 	fi
 	$(SUDO) sed -i 's/^#ParallelDownloads/ParallelDownloads/' '$(ROOTFS)/etc/pacman.conf'
