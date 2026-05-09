@@ -1,18 +1,30 @@
-name: Docker Image CI
+name: Build MIKAOS Arch Builder Container
 
 on:
-  push:
-    branches: [ "main" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [main]
+    paths:
+      - Makefile
+      - .github/workflows/docker-image.yml
+  push:
+    branches: [main]
+    paths:
+      - Makefile
+      - .github/workflows/docker-image.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
-
-  build:
-
+  build-builder-container:
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v4
-    - name: Build the Docker image
-      run: docker build -t iso-builder . --file desktop/Dockerfile
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate Makefile
+        run: make check
+
+      - name: Build generated Arch builder image
+        run: make docker-image DOCKER_IMAGE=mikaos-arch-builder:ci
