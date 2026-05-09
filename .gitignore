@@ -1,0 +1,17 @@
+# Local configuration may contain passwords from configure.sh
+.config
+
+# Generated rootfs, ISO output, and build state
+/rootfs/
+/iso/
+/out/
+/build/
+*.iso
+linux-*.tar.xz
+mikaos-arch-rootfs.tar.gz
+
+# Generated container/build helper files
+Dockerfile.arch
+
+# QEMU/OVMF state copied by Makefile targets
+OVMF_VARS.fd
