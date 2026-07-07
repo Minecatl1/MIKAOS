@@ -1,0 +1,416 @@
+name: Build Catppuccin Debian Live ISO (Self‑Contained)
+
+on:
+  workflow_dispatch:
+    inputs:
+      de:
+        description: 'Desktop Environment'
+        required: true
+        default: 'GNOME'
+        type: choice
+        options:
+          - GNOME
+          - KDE Plasma
+          - LXQt
+          - Hyprland
+      ds:
+        description: 'Display Server'
+        required: true
+        default: 'Wayland'
+        type: choice
+        options:
+          - X11
+          - Wayland
+          - Both
+      dm:
+        description: 'Display Manager'
+        required: true
+        default: 'GDM3'
+        type: choice
+        options:
+          - GDM3
+          - SDDM
+          - LightDM
+      flavor:
+        description: 'Catppuccin Flavor'
+        required: true
+        default: 'Mocha'
+        type: choice
+        options:
+          - Mocha
+          - Frappé
+          - Macchiato
+          - Latte
+      accent:
+        description: 'Catppuccin Accent'
+        required: true
+        default: 'Mauve'
+        type: choice
+        options:
+          - Rosewater
+          - Flamingo
+          - Pink
+          - Mauve
+          - Red
+          - Maroon
+          - Peach
+          - Yellow
+          - Green
+          - Teal
+          - Sky
+          - Sapphire
+          - Blue
+          - Lavender
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost /usr/local/lib/android
+          sudo apt-get clean
+
+      - name: Install host dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y live-build xorriso syslinux-utils squashfs-tools curl unzip git gpg
+
+      - name: Create setup-live-config.sh
+        run: |
+          cat > setup-live-config.sh <<'INNEREOF'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          # This script is generated in the workflow.
+          # It accepts arguments and creates the live-build config directory.
+          DE=""; DS=""; DM=""; FLAVOR=""; ACCENT=""
+          OPTS=$(getopt -o '' --long de:,ds:,dm:,flavor:,accent: -n 'setup-live-config.sh' -- "$@")
+          eval set -- "$OPTS"
+          while true; do
+            case "$1" in
+              --de)     DE="$2";     shift 2;;
+              --ds)     DS="$2";     shift 2;;
+              --dm)     DM="$2";     shift 2;;
+              --flavor) FLAVOR="$2"; shift 2;;
+              --accent) ACCENT="$2"; shift 2;;
+              --) shift; break;;
+              *) echo "Unknown option: $1"; exit 1;;
+            esac
+          done
+          rm -rf config/
+          mkdir -p config/{package-lists,archives,hooks/live,bootloaders/grub-pc/themes,includes.chroot/usr/share/backgrounds,includes.chroot/usr/local/bin}
+          # Helium repo
+          curl -fsSL https://raw.githubusercontent.com/imputnet/helium-linux/main/pubkey.asc | gpg --dearmor -o config/archives/helium.key.chroot
+          cat > config/archives/helium.list.chroot <<'HELIUM'
+          deb [arch=amd64 signed-by=/usr/share/keyrings/helium.gpg] https://pkg.helium.computer/deb stable main
+          HELIUM
+          # Base packages
+          cat > config/package-lists/base.list.chroot <<'PKGS'
+          vlc
+          git
+          curl
+          wget
+          build-essential
+          fish
+          helium-bin
+          PKGS
+          # Display server packages
+          case "$DS" in
+            X11)
+              echo "xserver-xorg" > config/package-lists/xorg.list.chroot
+              echo "x11-xserver-utils" >> config/package-lists/xorg.list.chroot
+              echo "xinit" >> config/package-lists/xorg.list.chroot
+              ;;
+            Wayland)
+              echo "weston" > config/package-lists/wayland.list.chroot
+              echo "libwayland-egl1-mesa" >> config/package-lists/wayland.list.chroot
+              echo "wayland-protocols" >> config/package-lists/wayland.list.chroot
+              ;;
+            Both)
+              echo "xserver-xorg" > config/package-lists/xorg.list.chroot
+              echo "x11-xserver-utils" >> config/package-lists/xorg.list.chroot
+              echo "xinit" >> config/package-lists/xorg.list.chroot
+              echo "weston" > config/package-lists/wayland.list.chroot
+              echo "libwayland-egl1-mesa" >> config/package-lists/wayland.list.chroot
+              echo "wayland-protocols" >> config/package-lists/wayland.list.chroot
+              ;;
+          esac
+          # DE packages
+          case "$DE" in
+            "GNOME")       PKG="gnome-session gnome-shell nautilus gnome-terminal";;
+            "KDE Plasma")  PKG="plasma-desktop plasma-workspace kwin-x11 konsole";;
+            "LXQt")        PKG="lxqt lxqt-panel openbox qterminal";;
+            "Hyprland")    PKG="hyprland kitty waybar wofi";;
+          esac
+          echo "$PKG" > config/package-lists/de.list.chroot
+          # DM package
+          case "$DM" in
+            GDM3)   echo "gdm3" > config/package-lists/dm.list.chroot;;
+            SDDM)   echo "sddm" > config/package-lists/dm.list.chroot;;
+            LightDM) echo "lightdm lightdm-gtk-greeter" > config/package-lists/dm.list.chroot;;
+          esac
+          # Hooks
+          cat > config/hooks/live/10-wallpaper.hook.chroot <<'HOOK'
+          #!/bin/bash
+          set -e
+          wget -q -O /usr/share/backgrounds/catppuccin-default.png \
+            https://raw.githubusercontent.com/orangci/walls-catppuccin-mocha/refs/heads/master/cat-vibin.png
+          HOOK
+          chmod +x config/hooks/live/10-wallpaper.hook.chroot
+
+          cat > config/hooks/live/20-fish-setup.hook.chroot <<'HOOK'
+          #!/bin/bash
+          set -e
+          grep -qxF '/usr/bin/fish' /etc/shells || echo '/usr/bin/fish' >> /etc/shells
+          if id -u user >/dev/null 2>&1; then chsh -s /usr/bin/fish user; fi
+          if [ -f /etc/default/useradd ]; then sed -i 's#^SHELL=.*#SHELL=/usr/bin/fish#' /etc/default/useradd; fi
+          curl -sL https://raw.githubusercontent.com/jorgebucaran/fisher/main/functions/fisher.fish \
+            | fish -c 'source && fisher install jorgebucaran/fisher && fisher install catppuccin/fish'
+          echo "fish_config theme choose \"Catppuccin __FLAVOR__\"" >> /etc/fish/config.fish
+          HOOK
+          sed -i "s/__FLAVOR__/${FLAVOR}/g" config/hooks/live/20-fish-setup.hook.chroot
+          chmod +x config/hooks/live/20-fish-setup.hook.chroot
+
+          # GRUB theme
+          THEME_ZIP_URL="https://github.com/catppuccin/grub/releases/latest/download/catppuccin-${FLAVOR,,}-grub-theme.zip"
+          mkdir -p tmp_grub_theme
+          curl -fsSL "$THEME_ZIP_URL" -o tmp_grub_theme/theme.zip
+          unzip -qo tmp_grub_theme/theme.zip -d tmp_grub_theme/extracted
+          THEME_DIR=$(find tmp_grub_theme/extracted -maxdepth 1 -type d ! -name 'extracted' ! -name '.' -exec basename {} \;)
+          mv "tmp_grub_theme/extracted/$THEME_DIR"/* config/bootloaders/grub-pc/themes/catppuccin/
+          rm -rf tmp_grub_theme
+          cat > config/bootloaders/grub-pc/grub.cfg <<'GRUB'
+          set theme=/boot/grub/themes/catppuccin/theme.txt
+          set menu_color_normal=cyan/blue
+          set menu_color_highlight=white/blue
+          insmod all_video
+          insmod gfxterm
+          terminal_output gfxterm
+          menuentry "Debian Live (Trixie)" {
+              linux /live/vmlinuz boot=live components quiet splash
+              initrd /live/initrd.img
+          }
+          GRUB
+
+          # Include post-install.sh if it exists
+          if [ -f ./post-install.sh ]; then
+            cp ./post-install.sh config/includes.chroot/usr/local/bin/post-install.sh
+            chmod +x config/includes.chroot/usr/local/bin/post-install.sh
+          fi
+          INNEREOF
+          chmod +x setup-live-config.sh
+
+      - name: Create post-install.sh (embedded into ISO)
+        run: |
+          cat > post-install.sh <<'INNEREOF'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          # Interactive post-install script for Catppuccin theming
+          RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; NC='\033[0m'
+          info()  { echo -e "${GREEN}[INFO]${NC}  $*"; }
+          warn()  { echo -e "${YELLOW}[WARN]${NC}  $*"; }
+          err()   { echo -e "${RED}[ERROR]${NC} $*"; exit 1; }
+          if [[ $EUID -ne 0 ]]; then
+              warn "Restarting with sudo..."
+              exec sudo "$0" "$@"
+          fi
+          DE_CHOICES=("GNOME" "KDE Plasma" "LXQt" "Hyprland")
+          DS_CHOICES=("X11" "Wayland" "Both")
+          DM_CHOICES=("GDM3" "SDDM" "LightDM")
+          FLAVOR_CHOICES=("Mocha" "Frappé" "Macchiato" "Latte")
+          ACCENT_CHOICES=("Rosewater" "Flamingo" "Pink" "Mauve" "Red" "Maroon" "Peach" "Yellow" "Green" "Teal" "Sky" "Sapphire" "Blue" "Lavender")
+
+          prompt_choice() {
+            local prompt="$1"; shift; local arr=("$@"); local sel=""
+            echo -e "\n${BLUE}$prompt${NC}"
+            for i in "${!arr[@]}"; do echo "  $((i+1))) ${arr[i]}"; done
+            while [[ -z "$sel" ]]; do
+              read -rp "Choose number [1-${#arr[@]}]: " num
+              if [[ "$num" =~ ^[0-9]+$ ]] && (( num >= 1 && num <= ${#arr[@]} )); then
+                sel="${arr[num-1]}"
+              else
+                echo "Invalid choice."
+              fi
+            done
+            echo "$sel"
+          }
+
+          echo "============================================="
+          echo " Catppuccin Theming & Desktop Setup"
+          echo "============================================="
+
+          DE=$(prompt_choice "Select Desktop Environment:" "${DE_CHOICES[@]}")
+          DS=$(prompt_choice "Select Display Server:" "${DS_CHOICES[@]}")
+          DM=$(prompt_choice "Select Display Manager:" "${DM_CHOICES[@]}")
+          FLAVOR=$(prompt_choice "Select Catppuccin Flavor:" "${FLAVOR_CHOICES[@]}")
+          ACCENT=$(prompt_choice "Select Catppuccin Accent:" "${ACCENT_CHOICES[@]}")
+
+          info "Proceeding with: DE=$DE, DS=$DS, DM=$DM, Flavor=$FLAVOR, Accent=$ACCENT"
+
+          # Ensure package installation
+          case "$DE" in
+            "GNOME")       PKGS="gnome-session gnome-shell nautilus gnome-terminal";;
+            "KDE Plasma")  PKGS="plasma-desktop plasma-workspace kwin-x11 konsole";;
+            "LXQt")        PKGS="lxqt lxqt-panel openbox qterminal";;
+            "Hyprland")    PKGS="hyprland kitty waybar wofi";;
+          esac
+          case "$DM" in
+            GDM3)    PKGS+=" gdm3";;
+            SDDM)    PKGS+=" sddm";;
+            LightDM) PKGS+=" lightdm lightdm-gtk-greeter";;
+          esac
+          PKGS+=" curl git unzip gtk-update-icon-cache gsettings-desktop-schemas papirus-icon-theme"
+          apt update && apt install -y $PKGS
+
+          # GTK theme
+          info "Installing Catppuccin GTK theme..."
+          GTK_TEMP=$(mktemp -d)
+          git clone --depth 1 https://github.com/catppuccin/gtk.git "$GTK_TEMP"
+          cd "$GTK_TEMP"
+          python3 install.py "${FLAVOR,,}" -a "${ACCENT,,}" --tweaks rimless
+          cd /
+          rm -rf "$GTK_TEMP"
+          mkdir -p /etc/gtk-3.0
+          cat > /etc/gtk-3.0/settings.ini <<EOF
+          [Settings]
+          gtk-theme-name=Catppuccin-${FLAVOR}-${ACCENT}
+          gtk-application-prefer-dark-theme=true
+          EOF
+
+          # Kvantum theme
+          info "Installing Catppuccin Kvantum theme..."
+          KV_TEMP=$(mktemp -d)
+          git clone --depth 1 https://github.com/catppuccin/kvantum.git "$KV_TEMP"
+          cd "$KV_TEMP"
+          ./install.sh
+          cd /
+          rm -rf "$KV_TEMP"
+          echo "export QT_STYLE_OVERRIDE=kvantum" >> /etc/environment
+          mkdir -p /etc/xdg/kvantum
+          cat > /etc/xdg/kvantum/kvantum.kvconfig <<EOF
+          [General]
+          theme=Catppuccin-${FLAVOR}-${ACCENT}
+          EOF
+
+          # Icons (Papirus with Catppuccin folders)
+          info "Applying Catppuccin icon theme..."
+          git clone --depth 1 https://github.com/catppuccin/papirus-folders.git /tmp/papirus-folders
+          cd /tmp/papirus-folders
+          ./papirus-folders -C "cat-${FLAVOR,,}-${ACCENT,,}" -t default
+          cd /
+          rm -rf /tmp/papirus-folders
+          gtk-update-icon-cache /usr/share/icons/Papirus/
+
+          # Cursors
+          info "Installing Catppuccin cursors..."
+          git clone --depth 1 https://github.com/catppuccin/cursors.git /tmp/cat-cursors
+          CURSOR_THEME="catppuccin-${FLAVOR,,}-dark"
+          cp -r /tmp/cat-cursors/themes/$CURSOR_THEME /usr/share/icons/
+          rm -rf /tmp/cat-cursors
+
+          # Wallpaper
+          WALLPAPER="/usr/share/backgrounds/catppuccin-default.png"
+          if [[ -f "$WALLPAPER" ]]; then
+              case "$DE" in
+                  GNOME)       sudo -u '#1000' gsettings set org.gnome.desktop.background picture-uri "file://${WALLPAPER}" 2>/dev/null;;
+                  "KDE Plasma") sudo -u '#1000' kwriteconfig5 --file plasma-org.kde.plasma.desktop-appletsrc --group 'Containments' --group '1' --group 'Wallpaper' --group 'org.kde.image' --group 'General' --key 'Image' "file://${WALLPAPER}" 2>/dev/null;;
+                  LXQt)        pcmanfm-qt --set-wallpaper "$WALLPAPER" 2>/dev/null || true;;
+                  Hyprland)    ;; # handled later
+              esac
+          fi
+
+          # Display Manager theming
+          info "Configuring $DM with Catppuccin theme..."
+          case "$DM" in
+            GDM3)
+                git clone --depth 1 https://github.com/catppuccin/gdm.git /tmp/cat-gdm
+                cd /tmp/cat-gdm
+                ./install.sh --flavor "${FLAVOR,,}" --accent "${ACCENT,,}"
+                cd /
+                rm -rf /tmp/cat-gdm
+                ;;
+            SDDM)
+                git clone --depth 1 https://github.com/catppuccin/sddm.git /tmp/cat-sddm
+                cp -r /tmp/cat-sddm/catppuccin-${FLAVOR,,} /usr/share/sddm/themes/
+                mkdir -p /etc/sddm.conf.d
+                echo -e "[Theme]\nCurrent=catppuccin-${FLAVOR,,}" > /etc/sddm.conf.d/theme.conf
+                rm -rf /tmp/cat-sddm
+                ;;
+            LightDM)
+                cat > /etc/lightdm/lightdm-gtk-greeter.conf <<EOF
+          [greeter]
+          theme-name = Catppuccin-${FLAVOR}-${ACCENT}
+          icon-theme-name = Papirus
+          cursor-theme-name = ${CURSOR_THEME}
+          background = ${WALLPAPER}
+          EOF
+                ;;
+          esac
+
+          # Hyprland specific
+          if [[ "$DE" == "Hyprland" ]]; then
+            info "Applying Catppuccin Hyprland configuration..."
+            HYPRI_USER=$(id -nu 1000)
+            mkdir -p /home/$HYPRI_USER/.config/hypr/
+            git clone --depth 1 https://github.com/catppuccin/hyprland.git /tmp/cat-hypr
+            cp /tmp/cat-hypr/themes/${FLAVOR,,}.conf /home/$HYPRI_USER/.config/hypr/catppuccin-colors.conf
+            cat >> /home/$HYPRI_USER/.config/hypr/hyprland.conf <<EOF
+          source = ~/.config/hypr/catppuccin-colors.conf
+          exec-once = swaybg -i ${WALLPAPER} -m fill
+          env = XCURSOR_THEME,${CURSOR_THEME}
+          EOF
+            chown -R $HYPRI_USER:$HYPRI_USER /home/$HYPRI_USER/.config/hypr
+            rm -rf /tmp/cat-hypr
+          fi
+
+          # Fish theme system-wide
+          info "Setting fish shell Catppuccin theme..."
+          FISH_CONF="/etc/fish/config.fish"
+          grep -q "fish_config theme choose" "$FISH_CONF" || echo "fish_config theme choose \"Catppuccin ${FLAVOR}\"" >> "$FISH_CONF"
+
+          echo -e "\n${GREEN}=============================================${NC}"
+          info "Post-installation setup complete. Please reboot or restart your display manager."
+          INNEREOF
+          chmod +x post-install.sh
+
+      - name: Run setup-live-config.sh
+        run: >
+          ./setup-live-config.sh
+          --de "${{ github.event.inputs.de }}"
+          --ds "${{ github.event.inputs.ds }}"
+          --dm "${{ github.event.inputs.dm }}"
+          --flavor "${{ github.event.inputs.flavor }}"
+          --accent "${{ github.event.inputs.accent }}"
+
+      - name: Configure live-build
+        run: >
+          lb config
+          --distribution trixie
+          --binary-images iso-hybrid
+          --bootloader grub-pc
+          --archive-areas "main contrib non-free"
+          --mode debian
+          --apt-recommends false
+
+      - name: Build ISO
+        run: sudo lb build
+
+      - name: Generate timestamped filename
+        id: timestamp
+        run: echo "TS=$(date +%Y%m%d-%H%M%S)" >> $GITHUB_OUTPUT
+
+      - name: Upload ISO to GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: '*.iso'
+          name: "Debian-Trixie-Catppuccin-${{ steps.timestamp.outputs.TS }}"
+          tag_name: "build-${{ steps.timestamp.outputs.TS }}"
+          body: |
+            Catppuccin themed Debian 13 Live ISO
+            - Desktop: ${{ github.event.inputs.de }}
+            - Display server: ${{ github.event.inputs.ds }}
+            - Display manager: ${{ github.event.inputs.dm }}
+            - Flavor: ${{ github.event.inputs.flavor }}
+            - Accent: ${{ github.event.inputs.accent }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
