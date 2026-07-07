@@ -172,15 +172,10 @@ jobs:
           chmod +x config/hooks/live/20-fish-setup.hook.chroot
 
           # GRUB theme
-          THEME_ZIP_URL="https://github.com/catppuccin/grub/releases/latest/download/catppuccin-${FLAVOR,,}-grub-theme.zip"
-          mkdir -p tmp_grub_theme
-          curl -fsSL "$THEME_ZIP_URL" -o tmp_grub_theme/theme.zip
-          unzip -qo tmp_grub_theme/theme.zip -d tmp_grub_theme/extracted
-          THEME_DIR=$(find tmp_grub_theme/extracted -maxdepth 1 -type d ! -name 'extracted' ! -name '.' -exec basename {} \;)
-          mv "tmp_grub_theme/extracted/$THEME_DIR"/* config/bootloaders/grub-pc/themes/catppuccin/
-          rm -rf tmp_grub_theme
+          git clone https://github.com/catppuccin/grub.git && cd grub
+          cp -r src/* /boot/grub/themes/
           cat > config/bootloaders/grub-pc/grub.cfg <<'GRUB'
-          set theme=/boot/grub/themes/catppuccin/theme.txt
+          set theme=/boot/grub/themes/catppuccin-$FLAVOR-grub-theme/theme.txt
           set menu_color_normal=cyan/blue
           set menu_color_highlight=white/blue
           insmod all_video
