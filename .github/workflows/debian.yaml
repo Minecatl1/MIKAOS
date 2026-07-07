@@ -265,7 +265,7 @@ jobs:
           GTK_TEMP=$(mktemp -d)
           git clone --depth 1 https://github.com/catppuccin/gtk.git "$GTK_TEMP"
           cd "$GTK_TEMP"
-          python3 install.py "${FLAVOR,,}" -a "${ACCENT,,}" --tweaks rimless
+          python3 install.py "${FLAVOR}" -a "${ACCENT}" --tweaks rimless
           cd /
           rm -rf "$GTK_TEMP"
           mkdir -p /etc/gtk-3.0
