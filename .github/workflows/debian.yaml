@@ -173,8 +173,8 @@ jobs:
 
           # GRUB theme
           git clone https://github.com/catppuccin/grub.git && cd grub
-          mkdir /boot/grub/themes/ || echo "failed to make dir"
-          cp -r src/* /boot/grub/themes/
+          sudo mkdir /boot/grub/themes/ || echo "failed to make dir"
+          sudo cp -r src/* /boot/grub/themes/
           cd ..
           rm -rf grub
           cat > config/bootloaders/grub-pc/grub.cfg <<'GRUB'
@@ -280,11 +280,11 @@ jobs:
           KV_TEMP=$(mktemp -d)
           git clone --depth 1 https://github.com/catppuccin/kvantum.git "$KV_TEMP"
           cd "$KV_TEMP"
-          ./install.sh
+          sudo ./install.sh
           cd /
           rm -rf "$KV_TEMP"
-          echo "export QT_STYLE_OVERRIDE=kvantum" >> /etc/environment
-          mkdir -p /etc/xdg/kvantum
+          sudo echo "export QT_STYLE_OVERRIDE=kvantum" >> /etc/environment
+          sudo mkdir -p /etc/xdg/kvantum
           cat > /etc/xdg/kvantum/kvantum.kvconfig <<EOF
           [General]
           theme=Catppuccin-${FLAVOR}-${ACCENT}
