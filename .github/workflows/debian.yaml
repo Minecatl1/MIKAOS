@@ -6,7 +6,7 @@ on:
       de:
         description: 'Desktop Environment'
         required: true
-        default: 'GNOME'
+        default: 'LXQt'
         type: choice
         options:
           - GNOME
@@ -16,7 +16,7 @@ on:
       ds:
         description: 'Display Server'
         required: true
-        default: 'Wayland'
+        default: 'X11'
         type: choice
         options:
           - X11
@@ -44,7 +44,7 @@ on:
       accent:
         description: 'Catppuccin Accent'
         required: true
-        default: 'Mauve'
+        default: 'Lavender'
         type: choice
         options:
           - Rosewater
