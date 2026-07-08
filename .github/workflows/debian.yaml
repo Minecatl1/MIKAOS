@@ -74,7 +74,7 @@ jobs:
       - name: Install host dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y live-build xorriso syslinux-utils squashfs-tools curl unzip git gpg debian-archive-keyring grub genisoimage syslinux grub-pc grub2-common grub-emu console-setup mtools
+          sudo apt-get install -y live-build xorriso syslinux-utils squashfs-tools curl unzip git gpg debian-archive-keyring genisoimage syslinux grub2-common grub-pc grub-efi-ia32 grub-efi-amd64 console-setup mtools
 
       - name: Create setup-live-config.sh
         run: |
