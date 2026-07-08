@@ -303,7 +303,7 @@ jobs:
           # Cursors
           info "Installing Catppuccin cursors..."
           git clone --depth 1 https://github.com/catppuccin/cursors.git /tmp/cat-cursors
-          CURSOR_THEME="catppuccin-${FLAVOR,,}-dark"
+          CURSOR_THEME="catppuccin-${FLAVOR}-dark"
           cp -r /tmp/cat-cursors/themes/$CURSOR_THEME /usr/share/icons/
           rm -rf /tmp/cat-cursors
 
@@ -387,7 +387,7 @@ jobs:
           --distribution trixie
           --binary-images iso-hybrid
           --mirror-chroot-security "http://security.debian.org/debian-security"
-          --debootstrap-options "--include=ca-certificates"
+          --linux-packages "ca-certificates"
           --bootloader grub-pc
           --archive-areas "main contrib non-free"
           --mode debian
