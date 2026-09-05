@@ -99,6 +99,7 @@ jobs:
           done
           rm -rf config/
           mkdir -p config/{package-lists,archives,hooks/live,bootloaders/grub-pc/themes,includes.chroot/usr/share/backgrounds,includes.chroot/usr/local/bin}
+          sudo apt install ca-certificates
           # Helium repo
           curl -fsSL https://raw.githubusercontent.com/imputnet/helium-linux/main/pubkey.asc | gpg --dearmor -o config/archives/helium.key.chroot
           cat > config/archives/helium.list.chroot <<'HELIUM'
@@ -112,8 +113,8 @@ jobs:
           wget
           build-essential
           fish
-          helium-bin
           ca-certificates
+          helium-bin
           PKGS
           # Display server packages
           case "$DS" in
